@@ -1,16 +1,14 @@
 # Make file for building application
 
 CC = g++
-# CFLAGS = -std=c++11 -lpthread
-CFLAGS =
-# EFLAGS = -Wall –Werror
-EFLAGS =
+CFLAGS = -Wall -Werror
+DEPS = mysh.h
 
 mysh: mysh.o
-	$(CC) mysh.o $(CFLAGS) $(EFLAGS) -o mysh
+	$(CC) mysh.o $(CFLAGS) -o mysh
 
-mysh.o: mysh.c
-	$(CC) -c mysh.c $(CFLAGS) $(EFLAGS)
+mysh.o: mysh.c $(DEPS)
+	$(CC) -c mysh.c $(CFLAGS)
 
 clean:
 	rm -f *.o *.d mysh
