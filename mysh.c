@@ -33,12 +33,12 @@ void exit_handler(int signal) {
 }
 
 
-int read_shell_cmd(char *cmd_line_buff, size_t *cmd_line_buff_size) {
+int read_shell_cmd(char *cmd_line_buff) {
 
-  ssize_t cmd_line_size;
-  cmd_line_size = getline(&cmd_line_buff, cmd_line_buff_size, stdin);
+  // cmd_line_size = getline(&cmd_line_buff, cmd_line_buff_size, stdin);
+  fgets(cmd_line_buff, CMD_LINE_LEN, stdin);
 
-  if (cmd_line_size >= 0) {
+  if (strlen(cmd_line_buff) > 0) {
     printf("You typed :: %s\n", cmd_line_buff);
     if (strcmp(cmd_line_buff, "exit\n") == 0) {
       return EXIT;
@@ -46,7 +46,7 @@ int read_shell_cmd(char *cmd_line_buff, size_t *cmd_line_buff_size) {
   } else {
     printf("You typed Nothing\n");
   }
-  
+
   return CONTINUE;
 }
 
@@ -86,10 +86,10 @@ int split_shell_cmd_line(char *cmd_line_buff, char **cmd_tokens_array) {
 int process_shell_cmd() {
 
   char *cmd_line_buff = (char*)malloc(CMD_LINE_LEN * sizeof(char));
-  size_t cmd_line_buff_size = 0;
+
   int func_ret;
 
-  func_ret = read_shell_cmd(cmd_line_buff, &cmd_line_buff_size);
+  func_ret = read_shell_cmd(cmd_line_buff);
 
   if (func_ret==EXIT) {
     free(cmd_line_buff);
