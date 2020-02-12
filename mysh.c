@@ -51,33 +51,32 @@ int read_shell_cmd(char *cmd_line_buff) {
 }
 
 
-int split_shell_cmd_line(char *cmd_line_buff, char **cmd_tokens_array) {
-
-  char *token;
-  int token_idx = 0;
-  // int tokens_array_size = NUMBER_OF_CMD_TOKENS;
+int split_shell_cmd_line(char *cmd_line_buff, char cmd_tokens_array[NUMBER_OF_CMD_TOKENS][CMD_LEN]) {
 
   if (!cmd_tokens_array) {
-    fprintf(stderr, "mysh>Error :: CMD Tokens Allocation Error\n");
+    fprintf(stderr, "mysh>Error :: Commands Tokens Allocation Error\n");
     return ERROR;
   }
   else {
-    token = strtok(cmd_line_buff, " ");
-    while (token != NULL) {
-      cmd_tokens_array[token_idx] = token;
-      token_idx++;
-      // if (token_idx >= NUMBER_OF_CMD_TOKENS) {
-      //   tokens_array_size += NUMBER_OF_CMD_TOKENS;
-      //   cmd_tokens_array = (char*)realloc(cmd_tokens_array, tokens_array_size * sizeof(char*));
-      //   if (!cmd_tokens_array) {
-      //     fprintf(stderr, "mysh>Error :: CMD Tokens Allocation Error\n");
-      //     return ERROR;
-      //   }
-      // }
-      token = strtok(NULL, " ");
-      printf("token is %s\n", token);
+    int token_idx = 0;
+    char *token_ptr = strtok(cmd_line_buff, " ");
+    while (token_ptr != NULL) {
+      if (token_idx > NUMBER_OF_CMD_TOKENS) {
+        fprintf(stderr, "mysh>Error :: Commands Length Exceeded\n");
+      }
+      else {
+        if (strlen(token_ptr)>CMD_LEN) {
+          fprintf(stderr, "mysh>Error :: Commands Size Exceeded :: %s\n", token_ptr);
+        }
+        else {
+          strcpy(cmd_tokens_array[token_idx], token_ptr);
+          token_idx++;
+        }
+      }
+      printf("token is :: %s\n", token_ptr);
+      token_ptr = strtok(NULL, " ");
     }
-    cmd_tokens_array[token_idx] = NULL;
+    strcpy(cmd_tokens_array[token_idx], CMD_EOF);
   }
   return CONTINUE;
 }
@@ -97,24 +96,22 @@ int process_shell_cmd() {
   }
   else {
     // run the commands
-    char **cmd_tokens_array = (char**)malloc(NUMBER_OF_CMD_TOKENS * sizeof(char*));
+    char cmd_tokens_array[NUMBER_OF_CMD_TOKENS][CMD_LEN];
     func_ret = split_shell_cmd_line(cmd_line_buff, cmd_tokens_array);
     if (func_ret==ERROR) {
-      free(cmd_tokens_array);
       return ERROR;
     }
     else {
-      // print tokens
-      int size = sizeof(cmd_tokens_array)/sizeof(cmd_tokens_array[0]);
-      printf("CMD size %lu\n", sizeof(cmd_tokens_array));
-      printf("CMD[] size %lu\n", sizeof(cmd_tokens_array[0]));
-      for (int i = 0; i < size; i++) {
-        printf("CMD Token at : %d is %s\n",i, cmd_tokens_array[i]);
+      for (int i = 0; i < NUMBER_OF_CMD_TOKENS; i++) {
+        if (strcmp(cmd_tokens_array[i], CMD_EOF) == 0) {
+          break;
+        }
+        else {
+          printf("Commands Token at : %d is %s\n",i, cmd_tokens_array[i]);
+        }
       }
-
     }
     printf("Vo VO VO\n");
-    free(cmd_tokens_array);
   }
   free(cmd_line_buff);
   return 0;
@@ -129,7 +126,7 @@ int main(int argc, char const *argv[]) {
   int process_ret;
 
   signal(SIGINT, exit_handler);
-  while (true){
+  while (TRUE){
     print_shell_name(shell_name);
     process_ret = process_shell_cmd();
     if (process_ret == ERROR) {
