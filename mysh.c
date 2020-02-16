@@ -13,12 +13,19 @@
 #include <unistd.h>
 #include <signal.h>
 #include "mysh.h"
-// #include <sys/types.h>
-// #include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 
 void print_shell_name(char *shell_name) {
   printf("\n%s>", shell_name);
+}
+
+void init_shell(char *shell_name) {
+  printf("\033[H\033[J");
+  printf("Starting :: %s ....", shell_name);
+  sleep(1);
+  printf("\033[H\033[J");
 }
 
 
@@ -51,17 +58,31 @@ int read_shell_cmd(char *cmd_line_buff) {
 }
 
 
-int split_shell_cmd_line(char *cmd_line_buff, char cmd_tokens_array[NUMBER_OF_CMD_TOKENS][CMD_LEN]) {
+void count_pipes_and_spaces(char *cmd_line_buff, int *pipe_count, int *space_count) {
+
+  for (int i=0; i < CMD_LINE_LEN; i++) {
+    if (cmd_line_buff[i]=='|') {
+      *pipe_count = *pipe_count + 1;
+    }
+    if (cmd_line_buff[i]==' ') {
+      *space_count = *space_count + 1;
+    }
+  }
+}
+
+
+int split_shell_cmd_line(char *cmd_line_buff, char cmd_tokens_array[][CMD_LEN], int *num_of_cmd_tokens) {
 
   if (!cmd_tokens_array) {
     fprintf(stderr, "mysh>Error :: Commands Tokens Allocation Error\n");
     return ERROR;
   }
   else {
+    char *cmd_line_buff_copy = strdup(cmd_line_buff);
     int token_idx = 0;
-    char *token_ptr = strtok(cmd_line_buff, " ");
+    char *token_ptr = strtok(cmd_line_buff, " |");
     while (token_ptr != NULL) {
-      if (token_idx > NUMBER_OF_CMD_TOKENS) {
+      if (token_idx > *num_of_cmd_tokens) {
         fprintf(stderr, "mysh>Error :: Commands Length Exceeded\n");
       }
       else {
@@ -72,12 +93,20 @@ int split_shell_cmd_line(char *cmd_line_buff, char cmd_tokens_array[NUMBER_OF_CM
           strcpy(cmd_tokens_array[token_idx], token_ptr);
           token_idx++;
         }
+        char delim_used = cmd_line_buff_copy[token_ptr-cmd_line_buff];
+        printf("CHAR >> %c\n", delim_used);
+        // if (=='|') {
+        //   strcpy(cmd_tokens_array[token_idx], "|");
+        //   token_idx++;
+        // }
       }
+      // printf("CHAR >> %c\n",token_ptr);
       printf("token is :: %s\n", token_ptr);
-      token_ptr = strtok(NULL, " ");
+      token_ptr = strtok(NULL, " |");
     }
     strcpy(cmd_tokens_array[token_idx], CMD_EOF);
   }
+
   return CONTINUE;
 }
 
@@ -85,33 +114,36 @@ int split_shell_cmd_line(char *cmd_line_buff, char cmd_tokens_array[NUMBER_OF_CM
 int process_shell_cmd() {
 
   char *cmd_line_buff = (char*)malloc(CMD_LINE_LEN * sizeof(char));
-
+  int pipe_count = 0;
+  int space_count = 0;
+  int num_of_cmd_tokens = 0;
   int func_ret;
 
   func_ret = read_shell_cmd(cmd_line_buff);
-
   if (func_ret==EXIT) {
     free(cmd_line_buff);
     exit_handler(EXIT);
   }
   else {
     // run the commands
-    char cmd_tokens_array[NUMBER_OF_CMD_TOKENS][CMD_LEN];
-    func_ret = split_shell_cmd_line(cmd_line_buff, cmd_tokens_array);
+    // find if cmd_line_buff has pipe and how many
+    // find if cmd_line_buff has spaces and how many
+    count_pipes_and_spaces(cmd_line_buff, &pipe_count, &space_count);
+    num_of_cmd_tokens = 2+space_count+2*pipe_count;
+
+    printf("Pipe %d, space %d, array of %d\n",pipe_count, space_count, num_of_cmd_tokens);
+
+    char cmd_tokens_array[num_of_cmd_tokens][CMD_LEN];
+
+    func_ret = split_shell_cmd_line(cmd_line_buff, cmd_tokens_array, &num_of_cmd_tokens);
     if (func_ret==ERROR) {
       return ERROR;
     }
     else {
-      for (int i = 0; i < NUMBER_OF_CMD_TOKENS; i++) {
-        if (strcmp(cmd_tokens_array[i], CMD_EOF) == 0) {
-          break;
-        }
-        else {
-          printf("Commands Token at : %d is %s\n",i, cmd_tokens_array[i]);
-        }
+      for (int i = 0; i < num_of_cmd_tokens; i++) {
+        printf("Commands Token at : %d is %s\n",i, cmd_tokens_array[i]);
       }
     }
-    printf("Vo VO VO\n");
   }
   free(cmd_line_buff);
   return 0;
@@ -124,6 +156,8 @@ int main(int argc, char const *argv[]) {
   char shell_name[shell_name_len-2];
   memcpy(shell_name, argv[0]+2, shell_name_len);
   int process_ret;
+
+  init_shell(shell_name);
 
   signal(SIGINT, exit_handler);
   while (TRUE){
