@@ -29,7 +29,8 @@ void clear_shell() {
 void print_help(char *shell_name) {
 	printf("Help Info ....\n");
 	printf("%s is a simple shell program with support for commands like.\n", shell_name);
-	printf("Internal commands: cd, pwd, echo, exit\n");
+	printf("Internal commands: cd, pwd, echo, exit or Ctrl+C, help\n");
+	printf("Clear Screen     : clear, reset\n");
 }
 
 
@@ -44,13 +45,48 @@ void exit_handler(int signal) {
 }
 
 
+int change_dir(char *cd_path) {
+
+	if (DEBUG_PRINT) {
+		fprintf(stderr, "Change DIR <%s>.\n", cd_path);
+	}
+
+	if (cd_path==NULL) {
+		// not path goeas to home user
+		char *user = getenv("USER");
+		char home_path[6+(int)strlen(user)] = "/home/";
+		if(user!=NULL) {
+			strcat(home_path, user);
+		}
+		if (chdir(home_path) != 0) {
+			perror("Error :: chdir failed,\n");
+			if (DEBUG_PRINT) {
+				fprintf(stderr, "PATH %s.\n", home_path);
+			}
+			return ERROR;
+		}
+	}
+	else {
+		if (chdir(cd_path) != 0) {
+			perror("Error :: chdir failed,\n");
+			if (DEBUG_PRINT) {
+				fprintf(stderr, "PATH %s.\n", cd_path);
+			}
+			return ERROR;
+		}
+	}
+	return CONTINUE;
+}
+
+
 int read_shell_cmd(char *cmd_line_buff, char *shell_name) {
 
-	// cmd_line_size = getline(&cmd_line_buff, cmd_line_buff_size, stdin);
 	fgets(cmd_line_buff, CMD_LINE_LEN, stdin);
 
 	if (strlen(cmd_line_buff) > 0) {
-		printf("You typed :: %s\n", cmd_line_buff);
+		if (DEBUG_PRINT) {
+			printf("You typed :: %s\n", cmd_line_buff);
+		}
 		if (strcmp(cmd_line_buff, "exit\n") == 0) {
 			return EXIT;
 		}
@@ -68,7 +104,9 @@ int read_shell_cmd(char *cmd_line_buff, char *shell_name) {
 		}
 	}
 	else {
-		printf("You typed Nothing\n");
+		if (DEBUG_PRINT) {
+			printf("You typed Nothing\n");
+		}
 	}
 
 	return CONTINUE;
@@ -99,44 +137,14 @@ void count_all_delimiters(char *cmd_line_buff, DELIMIT_Count *cmd_delimit) {
 }
 
 
-int split_shell_cmd_line(char *cmd_line_buff, char cmd_tokens_array[][CMD_LEN], int *num_of_cmd_tokens) {
+void add_null_at_delimit(char *cmd_line_buff, char *delimit) {
 
-	if (!cmd_tokens_array) {
-		fprintf(stderr, "mysh>Error :: Commands Tokens Allocation Error\n");
-		return ERROR;
-	}
-	else {
-		// char *cmd_line_buff_copy = strdup(cmd_line_buff);
-		int token_idx = 0;
-		char *token_ptr = strtok(cmd_line_buff, " ");
-		while (token_ptr != NULL) {
-			if (token_idx > *num_of_cmd_tokens) {
-				fprintf(stderr, "mysh>Error :: Commands Length Exceeded\n");
-			}
-			else {
-				if (strlen(token_ptr)>CMD_LEN) {
-					fprintf(stderr, "mysh>Error :: Commands Size Exceeded :: %s\n", token_ptr);
-				}
-				else {
-					strcpy(cmd_tokens_array[token_idx], token_ptr);
-					token_idx++;
-				}
-				// char delim_used = cmd_line_buff_copy[token_ptr-cmd_line_buff];
-				// printf("CHAR >> %c\n", delim_used);
-				// if (=='|') {
-				//   strcpy(cmd_tokens_array[token_idx], "|");
-				//   token_idx++;
-				// }
-			}
-			// printf("CHAR >> %c\n",token_ptr);
-			printf("token is :: %s\n", token_ptr);
-			token_ptr = strtok(NULL, " ");
+	for (size_t i = 0; i < CMD_LINE_LEN; i++) {
+		if (cmd_line_buff[i]==*delimit){
+			cmd_line_buff[i] = '\0';
+			break;
 		}
-		// cmd_tokens_array[token_idx] = CMD_EOF;
-		// strcpy(cmd_tokens_array[token_idx], CMD_EOF);
 	}
-
-	return CONTINUE;
 }
 
 
@@ -157,49 +165,69 @@ int split_shell_cmd_by_delimit(char *cmd_line_buff, char cmd_tokens_array[][CMD_
 				token_idx++;
 			}
 		}
-		printf("token is :: %s\n", token_ptr);
+		if (DEBUG_PRINT) {
+			printf("token is :: %s\n", token_ptr);
+		}
 		token_ptr = strtok(NULL, delimit);
 	}
 	return token_idx;
 }
 
 
-void add_null_at_delimit(char *cmd_line_buff, char *delimit) {
-
-	for (size_t i = 0; i < CMD_LINE_LEN; i++) {
-		if (cmd_line_buff[i]==*delimit){
-			cmd_line_buff[i] = '\0';
-			break;
-		}
-	}
-}
-
-
 int execute_shell_single_cmd(char *cmd_line_buff) {
 
-	char bin_path[] = "/bin/";
-	strcat(bin_path, cmd_line_buff);
-
-	char *args[] = {bin_path, NULL};
-
-	pid_t pid = fork();
-
-	if (pid == -1) {
-		perror("Error :: Failed forking child.\n");
-		return ERROR;
+	if (DEBUG_PRINT) {
+		printf("Executing Single CMD :: %s\n", cmd_line_buff);
 	}
-	else if (pid == 0) {
-		execv(args[0], args);
-		perror("Error :: Invalid Input.\n");
-		return ERROR;
+
+	char bin_path[] = "bin/";
+	char user_path[] = "usr/bin/";
+	char exe_path[1+(int)strlen(bin_path)+(int)strlen(user_path)] = "/";
+
+	if (strcmp(cmd_line_buff, "cd") == 0) {
+		return change_dir(NULL);
 	}
 	else {
-		wait(NULL);
+		if ((strcmp(cmd_line_buff, "clear")==0)||
+				(strcmp(cmd_line_buff, "reset")==0)) {
+			strcat(exe_path, user_path);
+			strcat(exe_path, cmd_line_buff);
+		}
+		else {
+			strcat(exe_path, bin_path);
+			strcat(exe_path, cmd_line_buff);
+		}
+
+		if (DEBUG_PRINT) {
+			printf("Executing Path :: %s\n", exe_path);
+		}
+
+		char *args[] = {exe_path, NULL};
+		pid_t pid = fork();
+
+		if (pid == -1) {
+			perror("Error :: Failed forking child.\n");
+			return ERROR;
+		}
+		else if (pid == 0) {
+			execv(args[0], args);
+			perror("Error :: Invalid Input.\n");
+			return ERROR;
+		}
+		else {
+			wait(NULL);
+		}
 	}
+
 	return CONTINUE;
 }
 
+
 int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count *cmd_delimit) {
+
+	if (DEBUG_PRINT) {
+		printf("Executing Space CMD :: %s\n", cmd_line_buff);
+	}
 
 	char space_delimit = ' ';
 	char cmd_tokens_array[cmd_delimit->total_count+1][CMD_LEN];
@@ -214,56 +242,35 @@ int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count *cmd_delimit
 		// create fork for space arg
 		char *args[] = {cmd_tokens_array[0], cmd_tokens_array[1], NULL};
 
-		pid_t pid = fork();
+		if (strcmp(args[0], "cd") == 0) {
+			return change_dir(args[1]);
 
-		if (pid == -1) {
-			perror("Error :: Failed forking child.\n");
-			return ERROR;
-		}
-		else if (pid == 0) {
-			execvp(args[0], args);
-			perror("Error :: Invalid Input.\n");
-			return ERROR;
 		}
 		else {
-			wait(NULL);
+			pid_t pid = fork();
+
+			if (pid == -1) {
+				perror("Error :: Failed forking child.\n");
+				return ERROR;
+			}
+			else if (pid == 0) {
+				execvp(args[0], args);
+				perror("Error :: Invalid Input.\n");
+				return ERROR;
+			}
+			else {
+				wait(NULL);
+			}
 		}
 	}
+
 	return CONTINUE;
 }
 
-int execute_shell_cmd(char cmd_tokens_array[][CMD_LEN], int *num_of_cmd_tokens, int *cmd_count) {
-
-	printf("Token size ::  %d\n", *num_of_cmd_tokens);
-	// char *args[] = {cmd_tokens_array[0], cmd_tokens_array[1], NULL};
-
-
-	char *args[] = {cmd_tokens_array[0], NULL};
-
-	printf("1::<%s> ,2::<%s> ,3::<%s>\n",args[0],args[1],args[2]);
-
-	pid_t pid = fork();
-
-	if (pid == -1) {
-		perror("Error :: Failed forking child.\n");
-		return ERROR;
-	}
-	else if (pid == 0) {
-		execvp(args[0], args);
-		perror("Error :: Invalid Input.\n");
-		return ERROR;
-	}
-	else {
-		wait(NULL);
-	}
-	return CONTINUE;
-}
 
 int process_shell_cmd(char *shell_name) {
 
 	char *cmd_line_buff = (char*)malloc(CMD_LINE_LEN * sizeof(char));
-	// int cmd_count = 0;
-	// int num_of_cmd_tokens = 0;
 	int func_ret;
 
 	func_ret = read_shell_cmd(cmd_line_buff, shell_name);
@@ -274,20 +281,27 @@ int process_shell_cmd(char *shell_name) {
 	else {
 
 		DELIMIT_Count *cmd_delimit = (DELIMIT_Count*)malloc(1 * sizeof(DELIMIT_Count));
-		printf("pipe_count :%d\n", cmd_delimit->pipe_count);
-		printf("space_count :%d\n", cmd_delimit->space_count);
-		printf("in_re_count :%d\n", cmd_delimit->in_re_count);
-		printf("out_re_count :%d\n", cmd_delimit->out_re_count);
-		printf("and_count :%d\n", cmd_delimit->and_count);
-		printf("total_count :%d\n", cmd_delimit->total_count);
+
+		if (DEBUG_PRINT) {
+			printf("pipe_count :%d\n", cmd_delimit->pipe_count);
+			printf("space_count :%d\n", cmd_delimit->space_count);
+			printf("in_re_count :%d\n", cmd_delimit->in_re_count);
+			printf("out_re_count :%d\n", cmd_delimit->out_re_count);
+			printf("and_count :%d\n", cmd_delimit->and_count);
+			printf("total_count :%d\n", cmd_delimit->total_count);
+		}
+
 		count_all_delimiters(cmd_line_buff, cmd_delimit);
-		printf("\n\n\n\n\n\n");
-		printf("pipe_count :%d\n", cmd_delimit->pipe_count);
-		printf("space_count :%d\n", cmd_delimit->space_count);
-		printf("in_re_count :%d\n", cmd_delimit->in_re_count);
-		printf("out_re_count :%d\n", cmd_delimit->out_re_count);
-		printf("and_count :%d\n", cmd_delimit->and_count);
-		printf("total_count :%d\n", cmd_delimit->total_count);
+
+		if (DEBUG_PRINT) {
+			printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+			printf("pipe_count :%d\n", cmd_delimit->pipe_count);
+			printf("space_count :%d\n", cmd_delimit->space_count);
+			printf("in_re_count :%d\n", cmd_delimit->in_re_count);
+			printf("out_re_count :%d\n", cmd_delimit->out_re_count);
+			printf("and_count :%d\n", cmd_delimit->and_count);
+			printf("total_count :%d\n", cmd_delimit->total_count);
+		}
 
 		// num_of_cmd_tokens = 1+cmd_delimit->total_count;
 		// char cmd_tokens_array[num_of_cmd_tokens][CMD_LEN];
@@ -310,21 +324,6 @@ int process_shell_cmd(char *shell_name) {
 				return ERROR;
 			}
 		}
-
-
-
-
-
-		// func_ret = split_shell_cmd_line(cmd_line_buff, cmd_tokens_array, &num_of_cmd_tokens);
-		// if (func_ret==ERROR) {
-		// 	return ERROR;
-		// }
-		// else {
-		// 	func_ret = execute_shell_cmd(cmd_tokens_array, &num_of_cmd_tokens, &cmd_count);
-		// 	if (func_ret==ERROR) {
-		// 		return ERROR;
-		// 	}
-		// }
 		free(cmd_delimit);
 	}
 	free(cmd_line_buff);
