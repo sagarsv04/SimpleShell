@@ -19,7 +19,7 @@
 // #define NUMBER_OF_CMD_TOKENS 8
 #define CMD_LINE_LEN 128
 #define CMD_LEN 32
-#define CMD_EOF "CMD_END"
+#define CMD_EOF NULL
 
 
 
@@ -32,12 +32,26 @@ enum {
 };
 
 
+typedef struct DELIMIT_Count {
+  int pipe_count;
+  int space_count;
+  int in_re_count;
+  int out_re_count;
+  int and_count;
+  int total_count;
+} DELIMIT_Count;
+
+
 void exit_handler(int signal);
 void print_shell_name(char *shell_name);
-void init_shell(char *shell_name);
-int read_shell_cmd(char *cmd_line_buff);
-int process_shell_cmd();
-void count_pipes_and_spaces(char *cmd_line_buff, int *pipe_count, int *space_count);
+void print_help(char *shell_name);
+void clear_shell();
+int read_shell_cmd(char *cmd_line_buff, char *shell_name);
+int process_shell_cmd(char *shell_name);
+int execute_shell_single_cmd(char *cmd_line_buff);
+int execute_shell_cmd(char cmd_tokens_array[][CMD_LEN], int *num_of_cmd_tokens, int *cmd_count);
+void count_all_delimiters(char *cmd_line_buff, DELIMIT_Count *cmd_delimit);
+int split_shell_cmd_by_delimit(char *cmd_line_buff, char cmd_tokens_array[][CMD_LEN], DELIMIT_Count *cmd_delimit, char *delimit);
 int split_shell_cmd_line(char *cmd_line_buff, char cmd_tokens_array[][CMD_LEN], int *num_of_cmd_tokens);
 
 #endif
