@@ -113,6 +113,18 @@ int read_shell_cmd(char *cmd_line_buff, char *shell_name) {
 }
 
 
+void clear_all_delimiters_count(DELIMIT_Count *cmd_delimit) {
+
+	// Initialize struct with zero
+	cmd_delimit->pipe_count = 0;
+	cmd_delimit->space_count = 0;
+	cmd_delimit->in_re_count = 0;
+	cmd_delimit->out_re_count = 0;
+	cmd_delimit->and_count = 0;
+	cmd_delimit->total_count = 0;
+}
+
+
 void count_all_delimiters(char *cmd_line_buff, DELIMIT_Count *cmd_delimit) {
 
 	for (int i=0; i < CMD_LINE_LEN; i++) {
@@ -271,6 +283,30 @@ int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count *cmd_delimit
 }
 
 
+int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count *cmd_delimit) {
+
+	if ((cmd_delimit->in_re_count > 0)&&(cmd_delimit->out_re_count > 0)) {
+		fprintf(stderr, "Error :: Invalid operation with Input/Output Redirection\n");
+
+	}
+	else {
+		// char redirection = ' ';
+		// if (cmd_delimit->in_re_count > 0) {
+		// 	redirection = '<';
+		// }
+		// else {
+		// 	redirection = '>';
+		// }
+		// char cmd_tokens_array[cmd_delimit->total_count+1][CMD_LEN];
+
+
+
+	}
+
+	return CONTINUE;
+}
+
+
 int process_shell_cmd(char *shell_name) {
 
 	char *cmd_line_buff = (char*)malloc(CMD_LINE_LEN * sizeof(char));
@@ -284,6 +320,7 @@ int process_shell_cmd(char *shell_name) {
 	else {
 
 		DELIMIT_Count *cmd_delimit = (DELIMIT_Count*)malloc(1 * sizeof(DELIMIT_Count));
+		clear_all_delimiters_count(cmd_delimit);
 
 		if (DEBUG_PRINT) {
 			printf("pipe_count :%d\n", cmd_delimit->pipe_count);
@@ -312,6 +349,13 @@ int process_shell_cmd(char *shell_name) {
 		if (cmd_delimit->pipe_count > 0) {
 			// pipes plus spaces
 			;
+		}
+		else if ((cmd_delimit->in_re_count > 0)||(cmd_delimit->out_re_count > 0)) {
+			// input-output redirection
+			func_ret = execute_shell_cmd_redirection(cmd_line_buff, cmd_delimit);
+			if (func_ret==ERROR) {
+				return ERROR;
+			}
 		}
 		else if (cmd_delimit->space_count > 0) {
 			// only spaces
