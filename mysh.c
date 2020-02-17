@@ -12,9 +12,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
-#include "mysh.h"
 #include <sys/types.h>
 #include <sys/wait.h>
+#include "mysh.h"
 
 
 void print_shell_name(char *shell_name) {
@@ -61,7 +61,7 @@ int change_dir(char *cd_path) {
 		if (chdir(home_path) != 0) {
 			perror("Error :: chdir failed,\n");
 			if (DEBUG_PRINT) {
-				fprintf(stderr, "PATH %s.\n", home_path);
+				fprintf(stderr, "PATH <%s>.\n", home_path);
 			}
 			return ERROR;
 		}
@@ -70,7 +70,7 @@ int change_dir(char *cd_path) {
 		if (chdir(cd_path) != 0) {
 			perror("Error :: chdir failed,\n");
 			if (DEBUG_PRINT) {
-				fprintf(stderr, "PATH %s.\n", cd_path);
+				fprintf(stderr, "PATH <%s>.\n", cd_path);
 			}
 			return ERROR;
 		}
@@ -85,7 +85,7 @@ int read_shell_cmd(char *cmd_line_buff, char *shell_name) {
 
 	if (strlen(cmd_line_buff) > 0) {
 		if (DEBUG_PRINT) {
-			printf("You typed :: %s\n", cmd_line_buff);
+			printf("You typed :: <%s>\n", cmd_line_buff);
 		}
 		if (strcmp(cmd_line_buff, "exit\n") == 0) {
 			return EXIT;
@@ -166,7 +166,7 @@ int split_shell_cmd_by_delimit(char *cmd_line_buff, char cmd_tokens_array[][CMD_
 			}
 		}
 		if (DEBUG_PRINT) {
-			printf("token is :: %s\n", token_ptr);
+			printf("Token is : <%s>\n", token_ptr);
 		}
 		token_ptr = strtok(NULL, delimit);
 	}
@@ -177,45 +177,48 @@ int split_shell_cmd_by_delimit(char *cmd_line_buff, char cmd_tokens_array[][CMD_
 int execute_shell_single_cmd(char *cmd_line_buff) {
 
 	if (DEBUG_PRINT) {
-		printf("Executing Single CMD :: %s\n", cmd_line_buff);
+		printf("Executing Single CMD : <%s>\n", cmd_line_buff);
 	}
 
-	char bin_path[] = "bin/";
-	char user_path[] = "usr/bin/";
-	char exe_path[1+(int)strlen(bin_path)+(int)strlen(user_path)] = "/";
+	if (strlen(cmd_line_buff)>0) {
 
-	if (strcmp(cmd_line_buff, "cd") == 0) {
-		return change_dir(NULL);
-	}
-	else {
-		if ((strcmp(cmd_line_buff, "clear")==0)||
-				(strcmp(cmd_line_buff, "reset")==0)) {
-			strcat(exe_path, user_path);
-			strcat(exe_path, cmd_line_buff);
+		char bin_path[] = "bin/";
+		char user_path[] = "usr/bin/";
+		char exe_path[1+(int)strlen(bin_path)+(int)strlen(user_path)] = "/";
+
+		if (strcmp(cmd_line_buff, "cd") == 0) {
+			return change_dir(NULL);
 		}
 		else {
-			strcat(exe_path, bin_path);
-			strcat(exe_path, cmd_line_buff);
-		}
+			if ((strcmp(cmd_line_buff, "clear")==0)||
+					(strcmp(cmd_line_buff, "reset")==0)) {
+				strcat(exe_path, user_path);
+				strcat(exe_path, cmd_line_buff);
+			}
+			else {
+				strcat(exe_path, bin_path);
+				strcat(exe_path, cmd_line_buff);
+			}
 
-		if (DEBUG_PRINT) {
-			printf("Executing Path :: %s\n", exe_path);
-		}
+			if (DEBUG_PRINT) {
+				printf("Executing Path : <%s>\n", exe_path);
+			}
 
-		char *args[] = {exe_path, NULL};
-		pid_t pid = fork();
+			char *args[] = {exe_path, NULL};
+			pid_t pid = fork();
 
-		if (pid == -1) {
-			perror("Error :: Failed forking child.\n");
-			return ERROR;
-		}
-		else if (pid == 0) {
-			execv(args[0], args);
-			perror("Error :: Invalid Input.\n");
-			return ERROR;
-		}
-		else {
-			wait(NULL);
+			if (pid == -1) {
+				perror("Error :: Failed forking child.\n");
+				return ERROR;
+			}
+			else if (pid == 0) {
+				execv(args[0], args);
+				perror("Error :: Invalid Input.\n");
+				return ERROR;
+			}
+			else {
+				wait(NULL);
+			}
 		}
 	}
 
@@ -226,7 +229,7 @@ int execute_shell_single_cmd(char *cmd_line_buff) {
 int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count *cmd_delimit) {
 
 	if (DEBUG_PRINT) {
-		printf("Executing Space CMD :: %s\n", cmd_line_buff);
+		printf("Executing Space CMD : <%s>\n", cmd_line_buff);
 	}
 
 	char space_delimit = ' ';
