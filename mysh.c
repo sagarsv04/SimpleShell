@@ -203,7 +203,7 @@ int execute_shell_single_cmd(char *cmd_line_buff) {
 		}
 		else {
 			if ((strcmp(cmd_line_buff, "clear")==0)||
-					(strcmp(cmd_line_buff, "reset")==0))||
+					(strcmp(cmd_line_buff, "reset")==0)||
 					(strcmp(cmd_line_buff, "whoami")==0)) {
 				strcat(exe_path, user_path);
 				strcat(exe_path, cmd_line_buff);
