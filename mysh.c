@@ -14,6 +14,8 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include "mysh.h"
 
 
@@ -127,7 +129,9 @@ void clear_all_delimiters_count(DELIMIT_Count *cmd_delimit) {
 
 void count_all_delimiters(char *cmd_line_buff, DELIMIT_Count *cmd_delimit) {
 
-	for (int i=0; i < CMD_LINE_LEN; i++) {
+	int cmd_len = strlen(cmd_line_buff);
+
+	for (int i=0; i < cmd_len; i++) {
 
 		if (cmd_line_buff[i]=='|') {
 			cmd_delimit->pipe_count += 1;
@@ -160,12 +164,23 @@ void add_null_at_delimit(char *cmd_line_buff, char *delimit) {
 }
 
 
-int split_shell_cmd_by_delimit(char *cmd_line_buff, char cmd_tokens_array[][CMD_LEN], DELIMIT_Count *cmd_delimit, char *delimit) {
+void remove_white_spaces(char* cmd_token_buff) {
+
+	if (cmd_token_buff[strlen(cmd_token_buff)-1]==' ') {
+		cmd_token_buff[strlen(cmd_token_buff)-1]='\0';
+	}
+	if(cmd_token_buff[0]==' ') {
+		memmove(cmd_token_buff, cmd_token_buff+1, strlen(cmd_token_buff));
+	}
+}
+
+
+int split_shell_cmd_by_delimit(char *cmd_line_buff, char cmd_tokens_array[][CMD_LEN], DELIMIT_Count cmd_delimit, char *delimit) {
 
 	int token_idx = 0;
 	char *token_ptr = strtok(cmd_line_buff, delimit);
 	while (token_ptr != NULL) {
-		if (token_idx > cmd_delimit->total_count) {
+		if (token_idx > cmd_delimit.total_count) {
 			fprintf(stderr, "mysh>Error :: Commands Length Exceeded\n");
 		}
 		else {
@@ -220,7 +235,7 @@ int execute_shell_single_cmd(char *cmd_line_buff) {
 			char *args[] = {exe_path, NULL};
 			pid_t pid = fork();
 
-			if (pid == -1) {
+			if (pid < 0) {
 				perror("Error :: Failed forking child.\n");
 				return ERROR;
 			}
@@ -239,16 +254,16 @@ int execute_shell_single_cmd(char *cmd_line_buff) {
 }
 
 
-int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count *cmd_delimit) {
+int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count cmd_delimit) {
 
 	if (DEBUG_PRINT) {
 		printf("Executing Space CMD : <%s>\n", cmd_line_buff);
 	}
 
 	char space_delimit = ' ';
-	char cmd_tokens_array[cmd_delimit->total_count+1][CMD_LEN];
+	char cmd_tokens_array[cmd_delimit.total_count+1][CMD_LEN];
 	int token_idx = split_shell_cmd_by_delimit(cmd_line_buff, cmd_tokens_array, cmd_delimit, &space_delimit);
-	if (token_idx<=cmd_delimit->total_count) {
+	if (token_idx<=cmd_delimit.total_count) {
 		// means space is added after single command
 		add_null_at_delimit(cmd_line_buff, &space_delimit);
 		// add null at space and run as single
@@ -265,7 +280,7 @@ int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count *cmd_delimit
 		else {
 			pid_t pid = fork();
 
-			if (pid == -1) {
+			if (pid < 0) {
 				perror("Error :: Failed forking child.\n");
 				return ERROR;
 			}
@@ -284,24 +299,80 @@ int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count *cmd_delimit
 }
 
 
-int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count *cmd_delimit) {
+int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit) {
 
-	if ((cmd_delimit->in_re_count > 0)&&(cmd_delimit->out_re_count > 0)) {
+	if ((cmd_delimit.in_re_count > 0)&&(cmd_delimit.out_re_count > 0)) {
 		fprintf(stderr, "Error :: Invalid operation with Input/Output Redirection\n");
-
 	}
 	else {
-		// char redirection = ' ';
-		// if (cmd_delimit->in_re_count > 0) {
-		// 	redirection = '<';
-		// }
-		// else {
-		// 	redirection = '>';
-		// }
-		// char cmd_tokens_array[cmd_delimit->total_count+1][CMD_LEN];
+		char redirection = ' ';
+		int array_size = 1;
+		int oflag;
+		int file_descriptor = 0;
+		int new_file_descriptor;
+
+		if (cmd_delimit.in_re_count > 0) {
+			redirection = '<';
+			oflag = O_RDONLY;
+			new_file_descriptor = 0;
+			array_size += cmd_delimit.in_re_count;
+		}
+		else if (cmd_delimit.out_re_count > 0) {
+			redirection = '>';
+			oflag = O_WRONLY;
+			new_file_descriptor = 1;
+			array_size += cmd_delimit.out_re_count;
+		}
+		else {
+			fprintf(stderr, "Error :: Invalid operation with Input/Output Redirection\n");
+			return ERROR;
+		}
+
+		char cmd_tokens_array[array_size][CMD_LEN];
+		int token_idx = split_shell_cmd_by_delimit(cmd_line_buff, cmd_tokens_array, cmd_delimit, &redirection);
+		remove_white_spaces(cmd_tokens_array[0]);
+		remove_white_spaces(cmd_tokens_array[1]);
+
+		DELIMIT_Count sub_cmd_delimit;
+		clear_all_delimiters_count(&sub_cmd_delimit);
+
+		if (DEBUG_PRINT) {
+			printf("sub_pipe_count :%d\n", sub_cmd_delimit.pipe_count);
+			printf("sub_space_count :%d\n", sub_cmd_delimit.space_count);
+			printf("sub_in_re_count :%d\n", sub_cmd_delimit.in_re_count);
+			printf("sub_out_re_count :%d\n", sub_cmd_delimit.out_re_count);
+			printf("sub_and_count :%d\n", sub_cmd_delimit.and_count);
+			printf("sub_total_count :%d\n", sub_cmd_delimit.total_count);
+		}
+
+		count_all_delimiters(cmd_tokens_array[0], &sub_cmd_delimit);
+
+		if (DEBUG_PRINT) {
+			printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+			printf("sub_pipe_count :%d\n", sub_cmd_delimit.pipe_count);
+			printf("sub_space_count :%d\n", sub_cmd_delimit.space_count);
+			printf("sub_in_re_count :%d\n", sub_cmd_delimit.in_re_count);
+			printf("sub_out_re_count :%d\n", sub_cmd_delimit.out_re_count);
+			printf("sub_and_count :%d\n", sub_cmd_delimit.and_count);
+			printf("sub_total_count :%d\n", sub_cmd_delimit.total_count);
+		}
 
 
+		// file_descriptor = open(cmd_tokens_array[1], oflag);
+		//
+		// dup2(file_descriptor,new_file_descriptor);
+		//
+		// close(file_descriptor);
 
+		execute_shell_cmd_with_space(cmd_tokens_array[0], sub_cmd_delimit);
+
+	// 	for (int i = 0; i < array_size; i++) {
+	// 		printf("Redirection Token : %s\n",cmd_tokens_array[i]);
+	// 	}
+		printf("Redirection Token Idx : %d\n", token_idx);
+		printf("oflag : %d\n", oflag);
+		printf("file_descriptor : %d\n", file_descriptor);
+		printf("new_file_descriptor : %d\n", new_file_descriptor);
 	}
 
 	return CONTINUE;
@@ -320,45 +391,46 @@ int process_shell_cmd(char *shell_name) {
 	}
 	else {
 
-		DELIMIT_Count *cmd_delimit = (DELIMIT_Count*)malloc(1 * sizeof(DELIMIT_Count));
-		clear_all_delimiters_count(cmd_delimit);
+		// DELIMIT_Count *cmd_delimit = (DELIMIT_Count*)malloc(1 * sizeof(DELIMIT_Count));
+		DELIMIT_Count cmd_delimit;
+		clear_all_delimiters_count(&cmd_delimit);
 
 		if (DEBUG_PRINT) {
-			printf("pipe_count :%d\n", cmd_delimit->pipe_count);
-			printf("space_count :%d\n", cmd_delimit->space_count);
-			printf("in_re_count :%d\n", cmd_delimit->in_re_count);
-			printf("out_re_count :%d\n", cmd_delimit->out_re_count);
-			printf("and_count :%d\n", cmd_delimit->and_count);
-			printf("total_count :%d\n", cmd_delimit->total_count);
+			printf("pipe_count :%d\n", cmd_delimit.pipe_count);
+			printf("space_count :%d\n", cmd_delimit.space_count);
+			printf("in_re_count :%d\n", cmd_delimit.in_re_count);
+			printf("out_re_count :%d\n", cmd_delimit.out_re_count);
+			printf("and_count :%d\n", cmd_delimit.and_count);
+			printf("total_count :%d\n", cmd_delimit.total_count);
 		}
 
-		count_all_delimiters(cmd_line_buff, cmd_delimit);
+		count_all_delimiters(cmd_line_buff, &cmd_delimit);
 
 		if (DEBUG_PRINT) {
 			printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
-			printf("pipe_count :%d\n", cmd_delimit->pipe_count);
-			printf("space_count :%d\n", cmd_delimit->space_count);
-			printf("in_re_count :%d\n", cmd_delimit->in_re_count);
-			printf("out_re_count :%d\n", cmd_delimit->out_re_count);
-			printf("and_count :%d\n", cmd_delimit->and_count);
-			printf("total_count :%d\n", cmd_delimit->total_count);
+			printf("pipe_count :%d\n", cmd_delimit.pipe_count);
+			printf("space_count :%d\n", cmd_delimit.space_count);
+			printf("in_re_count :%d\n", cmd_delimit.in_re_count);
+			printf("out_re_count :%d\n", cmd_delimit.out_re_count);
+			printf("and_count :%d\n", cmd_delimit.and_count);
+			printf("total_count :%d\n", cmd_delimit.total_count);
 		}
 
-		// num_of_cmd_tokens = 1+cmd_delimit->total_count;
+		// num_of_cmd_tokens = 1+cmd_delimit.total_count;
 		// char cmd_tokens_array[num_of_cmd_tokens][CMD_LEN];
 
-		if (cmd_delimit->pipe_count > 0) {
+		if (cmd_delimit.pipe_count > 0) {
 			// pipes plus spaces
 			;
 		}
-		else if ((cmd_delimit->in_re_count > 0)||(cmd_delimit->out_re_count > 0)) {
+		else if ((cmd_delimit.in_re_count > 0)||(cmd_delimit.out_re_count > 0)) {
 			// input-output redirection
 			func_ret = execute_shell_cmd_redirection(cmd_line_buff, cmd_delimit);
 			if (func_ret==ERROR) {
 				return ERROR;
 			}
 		}
-		else if (cmd_delimit->space_count > 0) {
+		else if (cmd_delimit.space_count > 0) {
 			// only spaces
 			func_ret = execute_shell_cmd_with_space(cmd_line_buff, cmd_delimit);
 			if (func_ret==ERROR) {
@@ -372,9 +444,14 @@ int process_shell_cmd(char *shell_name) {
 				return ERROR;
 			}
 		}
-		free(cmd_delimit);
 	}
+
 	free(cmd_line_buff);
+
+	if (DEBUG_PRINT) {
+		printf("Done process_shell_cmd BYE BYE BYE >>>>>\n");
+	}
+
 	return 0;
 }
 
