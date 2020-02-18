@@ -15,7 +15,8 @@
 #define TRUE 1
 #define FALSE 0
 
-#define DEBUG_PRINT TRUE
+// #define DEBUG_PRINT TRUE
+#define DEBUG_PRINT FALSE
 
 
 // #define NUMBER_OF_CMD_TOKENS 8
@@ -23,6 +24,12 @@
 #define CMD_LEN 32
 #define CMD_EOF NULL
 
+
+enum {
+  NO_FLAG,
+  READ_FLAG,
+  WRITE_FLAG
+};
 
 
 enum {
@@ -50,16 +57,21 @@ void print_help(char *shell_name);
 void exit_handler(int signal);
 
 int change_dir(char *cd_path);
+void check_variable_substitution(char *cmd_token);
 int read_shell_cmd(char *cmd_line_buff, char *shell_name);
+
 void clear_all_delimiters_count(DELIMIT_Count *cmd_delimit);
 void count_all_delimiters(char *cmd_line_buff, DELIMIT_Count *cmd_delimit);
 void add_null_at_delimit(char *cmd_line_buff, char *delimit);
 void remove_white_spaces(char* cmd_token_buff);
 int split_shell_cmd_by_delimit(char *cmd_line_buff, char cmd_tokens_array[][CMD_LEN], DELIMIT_Count cmd_delimit, char *delimit);
 
-int execute_shell_single_cmd(char *cmd_line_buff);
-int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count cmd_delimit);
-int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit);
+// int execute_shell_single_cmd(char *cmd_line_buff);
+int execute_shell_single_cmd(char *cmd_line_buff, int *pipe_one, int *pipe_two, int pipe_FLAG);
+// int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count cmd_delimit);
+int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int *pipe_one, int *pipe_two, int pipe_FLAG);
+// int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit);
+int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int *pipe_one, int *pipe_two, int pipe_FLAG);
 
 int process_shell_cmd(char *shell_name);
 
