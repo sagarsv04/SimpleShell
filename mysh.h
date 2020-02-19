@@ -68,11 +68,11 @@ void remove_white_spaces(char* cmd_token_buff);
 int split_shell_cmd_by_delimit(char *cmd_line_buff, char cmd_tokens_array[][CMD_LEN], DELIMIT_Count cmd_delimit, char *delimit);
 
 // int execute_shell_single_cmd(char *cmd_line_buff);
-int execute_shell_single_cmd(char *cmd_line_buff, int *pipe, int pipe_FLAG);
+int execute_shell_single_cmd(char *cmd_line_buff, int pipe_FLAG);
 // int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count cmd_delimit);
-int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int *pipe, int pipe_FLAG);
+int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG);
 // int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit);
-int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int *pipe, int pipe_FLAG);
+int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG);
 
 int process_shell_cmd(char *shell_name);
 
