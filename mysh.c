@@ -56,7 +56,9 @@ int change_dir(char *cd_path) {
 	if (cd_path==NULL) {
 		// not path goeas to home user
 		char *user = getenv("USER");
-		char home_path[6+(int)strlen(user)] = "/home/";
+		// char home_path[6+(int)strlen(user)] = "/home/";
+		char home_path[6+(int)strlen(user)];
+		strcpy(home_path,"/home/");
 		if(user!=NULL) {
 			strcat(home_path, user);
 		}
@@ -93,7 +95,7 @@ void check_variable_substitution(char *cmd_token) {
 			strcpy(cmd_token, "\0");
 		}
 		else if (strlen(subs)>CMD_LEN) {
-			subs[strlen(subs)-CMD_LEN] = '\0';
+			subs[CMD_LEN-2] = '\0';
 			strcpy(cmd_token, subs);
 		}
 		else {
@@ -236,7 +238,9 @@ int execute_shell_single_cmd(char *cmd_line_buff, int *p_pipe, int pipe_FLAG) {
 
 		char bin_path[] = "bin/";
 		char user_path[] = "usr/bin/";
-		char exe_path[1+(int)strlen(bin_path)+(int)strlen(user_path)] = "/";
+		// char exe_path[1+(int)strlen(bin_path)+(int)strlen(user_path)] = "/";
+		char exe_path[1+(int)strlen(bin_path)+(int)strlen(user_path)];
+		strcpy(exe_path,"/");
 
 		if (strcmp(cmd_line_buff, "cd") == 0) {
 			return change_dir(NULL);
@@ -267,32 +271,6 @@ int execute_shell_single_cmd(char *cmd_line_buff, int *p_pipe, int pipe_FLAG) {
 				return ERROR;
 			}
 			else if (pid == 0) {
-
-				// int my_pipe[2];
-
-				if (pipe_FLAG == READ_FLAG) {
-					// agar samne se bola hai pipe me se read kar then
-					// Redirect STDIN to Input part of pipe
-					dup2(p_pipe[0], STDIN_FILENO);
-					// closing pipe write
-					close(p_pipe[1]);
-					// close read pipe
-					close(p_pipe[0]);
-				}
-				else if (pipe_FLAG == WRITE_FLAG) {
-					// agar samne se bola hai pipe me write kar then
-					// Redirect STDOUT to output part of pipe
-					dup2(p_pipe[1], STDOUT_FILENO);
-					// close pipe read
-					close(p_pipe[0]);
-					// close write pipe
-					close(p_pipe[1]);
-				}
-				else {
-					// handle pipes
-					// close pipes
-					// execute commands
-				}
 
 				execv(args[0], args);
 				perror("Error :: Invalid Input.\n");
@@ -336,45 +314,21 @@ int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count cmd_delimit,
 		else {
 
 			// create a child process using fork for space arg
-			pid_t pid = fork();
+			// pid_t pid = fork();
 
-			if (pid < 0) {
-				perror("Error :: Failed forking child.\n");
-				return ERROR;
-			}
-			else if (pid == 0) {
-
-				// int my_pipe[2];
-
-				if (pipe_FLAG == READ_FLAG) {
-					// agar samne se bola hai pipe me se read kar then
-					// Redirect STDIN to Input part of pipe
-					dup2(p_pipe[0], STDIN_FILENO);
-					// closing pipe write
-					close(p_pipe[1]);
-					// close read pipe
-					close(p_pipe[0]);
-				}
-				else if (pipe_FLAG == WRITE_FLAG) {
-					// agar samne se bola hai pipe me write kar then
-					// Redirect STDOUT to output part of pipe
-					dup2(p_pipe[1], STDOUT_FILENO);
-					// close pipe read
-					close(p_pipe[0]);
-					// close write pipe
-					close(p_pipe[1]);
-				}
-				else {
-					// handle pipes
-					// close pipes
-					// execute commands
-				}
-
-				execvp(args[0], args);
-				perror("Error :: Invalid Input.\n");
-				return ERROR;
+			if (FALSE) {
+			// if (pid < 0) {
+			// 	perror("Error :: Failed forking child.\n");
+			// 	return ERROR;
+			// }
+			// else if (pid == 0) {
+			//
+			// 	execvp(args[0], args);
+			// 	perror("Error :: Invalid Input.\n");
+			// 	return ERROR;
 			}
 			else {
+				execvp(args[0], args);
 				wait(NULL);
 			}
 		}
@@ -452,76 +406,38 @@ int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit
 		}
 		else if (pid == 0) {
 
+			int file_disc;
 			int my_pipe[2];
 
-			// if (pipe_FLAG == READ_FLAG) {
-			// 	// agar samne se bola hai pipe me se read kar then
-			// 	// Redirect STDIN to Input part of pipe
-			// 	dup2(pipe[0], STDIN_FILENO);
-			// 	// closing pipe write
-			// 	close(pipe[1]);
-			// 	// close read pipe
-			// 	close(pipe[0]);
-			// }
-			// else if (pipe_FLAG == WRITE_FLAG) {
-			// 	// agar samne se bola hai pipe me write kar then
-			// 	// Redirect STDOUT to output part of pipe
-			// 	dup2(pipe[1], STDOUT_FILENO);
-			// 	// close pipe read
-			// 	close(pipe[0]);
-			// 	// close write pipe
-			// 	close(pipe[1]);
-			// }
-			// else {
-			// 	// handle pipes
-			// 	// close pipes
-			// 	// execute commands
-			// }
-
-			if (pipe_FLAG == READ_FLAG) {
-				/* code */
-			}
-			else if (pipe_FLAG == READ_FLAG) {
-				/* code */
-			}
-			else {
-				// this function has been called from child
-				// do not create another child
-				// handle pipes
-				// close pipes
-				// execute commands
-			}
-
-			if (pipe(my_pipe)<0) {
-				perror("Error :: Pipe Failed.\n");
-				return ERROR;
-			}
-
-			char string[FL_LINE_LEN];
-			FILE *file;
-
 			if (strcmp(oflag, "r") == 0) {
-				// Child process closes up input side of pipe one
-				close(my_pipe[0]);
-				file = fopen(cmd_tokens_array[1], oflag);
-				if (file) {
-					// scanning from file
-					while (fscanf(file, "%s\n", string) != EOF) {
-						// strcat(var, string);
-						write(my_pipe[1], string, FL_LINE_LEN);
-					}
-					fclose(file);
-					dup2(my_pipe[1], STDOUT_FILENO);
-					close(my_pipe[1]);
+
+				file_disc = open(cmd_tokens_array[1], O_RDONLY);
+				if (file_disc < 0) {
+					perror("Error :: Failed reading file.\n");
+					fprintf(stderr, "File : %s\n",cmd_tokens_array[1]);
+        	return ERROR;
+				}
+				else{
+					dup2(file_disc, STDIN_FILENO);
+					close(file_disc);
 				}
 				return execute_shell_cmd_with_space(cmd_tokens_array[0], sub_cmd_delimit, my_pipe, READ_FLAG);
 			}
 			else if (strcmp(oflag, "w") == 0) {
 
-				/* code */
+				execute_shell_cmd_with_space(cmd_tokens_array[0], sub_cmd_delimit, my_pipe, WRITE_FLAG);
+
+				file_disc = creat(cmd_tokens_array[1], 0644);
+				if (file_disc < 0) {
+					perror("Error :: Failed creating file.\n");
+					fprintf(stderr, "File : %s\n",cmd_tokens_array[1]);
+        	return ERROR;
+				}
+				else{
+					dup2(file_disc, STDOUT_FILENO);
+        	close(file_disc);
+				}
 			}
-
-
 		}
 		else {
 			wait(NULL);
@@ -570,9 +486,6 @@ int process_shell_cmd(char *shell_name) {
 			printf("and_count :%d\n", cmd_delimit.and_count);
 			printf("total_count :%d\n", cmd_delimit.total_count);
 		}
-
-		// num_of_cmd_tokens = 1+cmd_delimit.total_count;
-		// char cmd_tokens_array[num_of_cmd_tokens][CMD_LEN];
 
 		if (cmd_delimit.pipe_count > 0) {
 			// pipes plus spaces
