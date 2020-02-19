@@ -179,6 +179,16 @@ void count_all_delimiters(char *cmd_line_buff, DELIMIT_Count *cmd_delimit) {
 		}
 	}
 	cmd_delimit->total_count = cmd_delimit->pipe_count+cmd_delimit->space_count+cmd_delimit->and_count+cmd_delimit->in_re_count+cmd_delimit->in_re_count+cmd_delimit->out_re_count;
+
+	if (DEBUG_PRINT) {
+		printf("\n");
+		printf("pipe_count :%d\n", cmd_delimit->pipe_count);
+		printf("space_count :%d\n", cmd_delimit->space_count);
+		printf("in_re_count :%d\n", cmd_delimit->in_re_count);
+		printf("out_re_count :%d\n", cmd_delimit->out_re_count);
+		printf("and_count :%d\n", cmd_delimit->and_count);
+		printf("total_count :%d\n", cmd_delimit->total_count);
+	}
 }
 
 
@@ -332,7 +342,7 @@ int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count cmd_delimit,
 			return change_dir(args[1]);
 		}
 		else {
-			fprintf(stderr, "The arg is :<%s>\n", cmd_tokens_array[1]);
+
 			if (pipe_FLAG==READ_FLAG) {
 				// do not fork as the process is already forked
 				// just handle stdout, sdtin
@@ -411,27 +421,7 @@ int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit
 
 		DELIMIT_Count sub_cmd_delimit;
 		clear_all_delimiters_count(&sub_cmd_delimit);
-
-		if (DEBUG_PRINT) {
-			printf("sub_pipe_count :%d\n", sub_cmd_delimit.pipe_count);
-			printf("sub_space_count :%d\n", sub_cmd_delimit.space_count);
-			printf("sub_in_re_count :%d\n", sub_cmd_delimit.in_re_count);
-			printf("sub_out_re_count :%d\n", sub_cmd_delimit.out_re_count);
-			printf("sub_and_count :%d\n", sub_cmd_delimit.and_count);
-			printf("sub_total_count :%d\n", sub_cmd_delimit.total_count);
-		}
-
 		count_all_delimiters(cmd_tokens_array[0], &sub_cmd_delimit);
-
-		if (DEBUG_PRINT) {
-			printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
-			printf("sub_pipe_count :%d\n", sub_cmd_delimit.pipe_count);
-			printf("sub_space_count :%d\n", sub_cmd_delimit.space_count);
-			printf("sub_in_re_count :%d\n", sub_cmd_delimit.in_re_count);
-			printf("sub_out_re_count :%d\n", sub_cmd_delimit.out_re_count);
-			printf("sub_and_count :%d\n", sub_cmd_delimit.and_count);
-			printf("sub_total_count :%d\n", sub_cmd_delimit.total_count);
-		}
 
 		// create a child process using fork for space arg
 		pid_t pid = fork();
@@ -486,6 +476,7 @@ int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit
 int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG) {
 
 	char pipe_delimit[] = "|";
+	int func_ret;
 	int array_size = cmd_delimit.pipe_count+1;
 
 	if (DEBUG_PRINT) {
@@ -523,23 +514,25 @@ int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int 
 	else if (pid == 0) {
 		// call same func as child with left side
 		// replace stdout with the write end of the pipe
-    dup2(pipe_fd[1],STDOUT_FILENO);
-  	// close read to pipe, in child
-    close(pipe_fd[0]);
-
-    return execute_shell_cmd_with_space(cmd_tokens_array[0], left_cmd_delimit, WRITE_FLAG);
+		dup2(pipe_fd[1],STDOUT_FILENO);
+		// close read to pipe, in child
+		close(pipe_fd[0]);
+		return execute_shell_cmd_with_space(cmd_tokens_array[0], left_cmd_delimit, WRITE_FLAG);
 	}
 	else {
-		wait(NULL);
 		// call same func as parent with right side
 		// replace stdin with the read end of the pipe
 		dup2(pipe_fd[0],STDIN_FILENO);
 		// close write to pipe, in parent
 		close(pipe_fd[1]);
-
-		return execute_shell_cmd_with_space(cmd_tokens_array[1], right_cmd_delimit, READ_FLAG);
-  }
-
+		func_ret = execute_shell_cmd_with_space(cmd_tokens_array[1], right_cmd_delimit, READ_FLAG);
+		if (func_ret==ERROR) {
+			return ERROR;
+		}
+		else {
+			wait(NULL);
+		}
+	}
 
 	return CONTINUE;
 }
@@ -560,26 +553,7 @@ int process_shell_cmd(char *shell_name) {
 		DELIMIT_Count cmd_delimit;
 		clear_all_delimiters_count(&cmd_delimit);
 
-		if (DEBUG_PRINT) {
-			printf("pipe_count :%d\n", cmd_delimit.pipe_count);
-			printf("space_count :%d\n", cmd_delimit.space_count);
-			printf("in_re_count :%d\n", cmd_delimit.in_re_count);
-			printf("out_re_count :%d\n", cmd_delimit.out_re_count);
-			printf("and_count :%d\n", cmd_delimit.and_count);
-			printf("total_count :%d\n", cmd_delimit.total_count);
-		}
-
 		count_all_delimiters(cmd_line_buff, &cmd_delimit);
-
-		if (DEBUG_PRINT) {
-			printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
-			printf("pipe_count :%d\n", cmd_delimit.pipe_count);
-			printf("space_count :%d\n", cmd_delimit.space_count);
-			printf("in_re_count :%d\n", cmd_delimit.in_re_count);
-			printf("out_re_count :%d\n", cmd_delimit.out_re_count);
-			printf("and_count :%d\n", cmd_delimit.and_count);
-			printf("total_count :%d\n", cmd_delimit.total_count);
-		}
 
 		if (cmd_delimit.pipe_count > 0) {
 			// pipes plus spaces

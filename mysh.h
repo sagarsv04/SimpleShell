@@ -15,8 +15,8 @@
 #define TRUE 1
 #define FALSE 0
 
-#define DEBUG_PRINT TRUE
-// #define DEBUG_PRINT FALSE
+// #define DEBUG_PRINT TRUE
+#define DEBUG_PRINT FALSE
 
 
 // #define NUMBER_OF_CMD_TOKENS 8
