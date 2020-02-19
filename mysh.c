@@ -95,7 +95,10 @@ void check_variable_substitution(char *cmd_token) {
 			strcpy(cmd_token, "\0");
 		}
 		else if (strlen(subs)>CMD_LEN) {
-			subs[CMD_LEN-2] = '\0';
+			subs[CMD_LEN-4] = '.';
+			subs[CMD_LEN-3] = '.';
+			subs[CMD_LEN-2] = '.';
+			subs[CMD_LEN-1] = '\0';
 			strcpy(cmd_token, subs);
 		}
 		else {
