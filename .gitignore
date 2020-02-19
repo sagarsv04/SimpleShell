@@ -58,3 +58,4 @@ cmake-build-debug/
 CMakeLists.txt
 temp*
 test*
+*.txt

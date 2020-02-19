@@ -200,6 +200,9 @@ void remove_white_spaces(char* cmd_token_buff) {
 int split_shell_cmd_by_delimit(char *cmd_line_buff, char cmd_tokens_array[][CMD_LEN], DELIMIT_Count cmd_delimit, char *delimit) {
 
 	int token_idx = 0;
+	if (DEBUG_PRINT) {
+		printf("Delimit is : <%s>\n", delimit);
+	}
 	char *token_ptr = strtok(cmd_line_buff, delimit);
 	while (token_ptr != NULL) {
 		if (token_idx > cmd_delimit.total_count) {
@@ -223,7 +226,7 @@ int split_shell_cmd_by_delimit(char *cmd_line_buff, char cmd_tokens_array[][CMD_
 }
 
 
-int execute_shell_single_cmd(char *cmd_line_buff, int *pipe_one, int *pipe_two, int pipe_FLAG) {
+int execute_shell_single_cmd(char *cmd_line_buff, int *p_pipe, int pipe_FLAG) {
 
 	if (DEBUG_PRINT) {
 		printf("Executing Single CMD : <%s>\n", cmd_line_buff);
@@ -255,6 +258,8 @@ int execute_shell_single_cmd(char *cmd_line_buff, int *pipe_one, int *pipe_two, 
 			}
 
 			char *args[] = {exe_path, NULL};
+
+			// create a child process using fork for space arg
 			pid_t pid = fork();
 
 			if (pid < 0) {
@@ -262,6 +267,33 @@ int execute_shell_single_cmd(char *cmd_line_buff, int *pipe_one, int *pipe_two, 
 				return ERROR;
 			}
 			else if (pid == 0) {
+
+				// int my_pipe[2];
+
+				if (pipe_FLAG == READ_FLAG) {
+					// agar samne se bola hai pipe me se read kar then
+					// Redirect STDIN to Input part of pipe
+					dup2(p_pipe[0], STDIN_FILENO);
+					// closing pipe write
+					close(p_pipe[1]);
+					// close read pipe
+					close(p_pipe[0]);
+				}
+				else if (pipe_FLAG == WRITE_FLAG) {
+					// agar samne se bola hai pipe me write kar then
+					// Redirect STDOUT to output part of pipe
+					dup2(p_pipe[1], STDOUT_FILENO);
+					// close pipe read
+					close(p_pipe[0]);
+					// close write pipe
+					close(p_pipe[1]);
+				}
+				else {
+					// handle pipes
+					// close pipes
+					// execute commands
+				}
+
 				execv(args[0], args);
 				perror("Error :: Invalid Input.\n");
 				return ERROR;
@@ -276,20 +308,20 @@ int execute_shell_single_cmd(char *cmd_line_buff, int *pipe_one, int *pipe_two, 
 }
 
 
-int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int *pipe_one, int *pipe_two, int pipe_FLAG) {
+int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int *p_pipe, int pipe_FLAG) {
 
 	if (DEBUG_PRINT) {
 		printf("Executing Space CMD : <%s>\n", cmd_line_buff);
 	}
 
-	char space_delimit = ' ';
+	char space_delimit[] = " ";
 	char cmd_tokens_array[cmd_delimit.total_count+1][CMD_LEN];
-	int token_idx = split_shell_cmd_by_delimit(cmd_line_buff, cmd_tokens_array, cmd_delimit, &space_delimit);
+	int token_idx = split_shell_cmd_by_delimit(cmd_line_buff, cmd_tokens_array, cmd_delimit, space_delimit);
 	if (token_idx<=cmd_delimit.total_count) {
 		// means space is added after single command
-		add_null_at_delimit(cmd_line_buff, &space_delimit);
+		add_null_at_delimit(cmd_line_buff, space_delimit);
 		// add null at space and run as single
-		return execute_shell_single_cmd(cmd_line_buff, pipe_one, pipe_two, pipe_FLAG);
+		return execute_shell_single_cmd(cmd_line_buff, p_pipe, pipe_FLAG);
 	}
 	else {
 		// replace $__ with value
@@ -302,7 +334,8 @@ int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count cmd_delimit,
 
 		}
 		else {
-			// create fork for space arg
+
+			// create a child process using fork for space arg
 			pid_t pid = fork();
 
 			if (pid < 0) {
@@ -310,6 +343,33 @@ int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count cmd_delimit,
 				return ERROR;
 			}
 			else if (pid == 0) {
+
+				// int my_pipe[2];
+
+				if (pipe_FLAG == READ_FLAG) {
+					// agar samne se bola hai pipe me se read kar then
+					// Redirect STDIN to Input part of pipe
+					dup2(p_pipe[0], STDIN_FILENO);
+					// closing pipe write
+					close(p_pipe[1]);
+					// close read pipe
+					close(p_pipe[0]);
+				}
+				else if (pipe_FLAG == WRITE_FLAG) {
+					// agar samne se bola hai pipe me write kar then
+					// Redirect STDOUT to output part of pipe
+					dup2(p_pipe[1], STDOUT_FILENO);
+					// close pipe read
+					close(p_pipe[0]);
+					// close write pipe
+					close(p_pipe[1]);
+				}
+				else {
+					// handle pipes
+					// close pipes
+					// execute commands
+				}
+
 				execvp(args[0], args);
 				perror("Error :: Invalid Input.\n");
 				return ERROR;
@@ -324,28 +384,24 @@ int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count cmd_delimit,
 }
 
 
-int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int *pipe_one, int *pipe_two, int pipe_FLAG) {
+int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int *p_pipe, int pipe_FLAG) {
 
 	if ((cmd_delimit.in_re_count > 0)&&(cmd_delimit.out_re_count > 0)) {
 		fprintf(stderr, "Error :: Invalid operation with Input/Output Redirection\n");
 	}
 	else {
-		char redirection = ' ';
+		char redirection[] = " ";
 		int array_size = 1;
-		int oflag;
-		int file_descriptor = 0;
-		int new_file_descriptor;
+		char oflag[] = " ";
 
 		if (cmd_delimit.in_re_count > 0) {
-			redirection = '<';
-			oflag = O_RDONLY;
-			new_file_descriptor = 0;
+			strcpy(redirection, "<");
+			strcpy(oflag, "r");
 			array_size += cmd_delimit.in_re_count;
 		}
 		else if (cmd_delimit.out_re_count > 0) {
-			redirection = '>';
-			oflag = O_WRONLY;
-			new_file_descriptor = 1;
+			strcpy(redirection, ">");
+			strcpy(oflag, "w");
 			array_size += cmd_delimit.out_re_count;
 		}
 		else {
@@ -353,8 +409,13 @@ int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit
 			return ERROR;
 		}
 
+		if (DEBUG_PRINT) {
+			printf("Redirect Delimit is : <%s>\n", redirection);
+		}
+
 		char cmd_tokens_array[array_size][CMD_LEN];
-		int token_idx = split_shell_cmd_by_delimit(cmd_line_buff, cmd_tokens_array, cmd_delimit, &redirection);
+
+		split_shell_cmd_by_delimit(cmd_line_buff, cmd_tokens_array, cmd_delimit, redirection);
 		remove_white_spaces(cmd_tokens_array[0]);
 		remove_white_spaces(cmd_tokens_array[1]);
 
@@ -382,28 +443,89 @@ int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit
 			printf("sub_total_count :%d\n", sub_cmd_delimit.total_count);
 		}
 
+		// create a child process using fork for space arg
+		pid_t pid = fork();
 
-		// create a child process
-		// create pipe_two
-		// if pipe_FLAG is read, read from pipe_one[1]
-		// if pipe flag is write, write to pipe_one[0]
-		// else create pipe_one and pass to func with repective pipe_FLAG
+		if (pid < 0) {
+			perror("Error :: Failed forking child.\n");
+			return ERROR;
+		}
+		else if (pid == 0) {
 
-		// file_descriptor = open(cmd_tokens_array[1], oflag);
-		//
-		// dup2(file_descriptor,new_file_descriptor);
-		//
-		// close(file_descriptor);
+			int my_pipe[2];
 
-		execute_shell_cmd_with_space(cmd_tokens_array[0], sub_cmd_delimit, pipe_one, pipe_two, pipe_FLAG);
+			// if (pipe_FLAG == READ_FLAG) {
+			// 	// agar samne se bola hai pipe me se read kar then
+			// 	// Redirect STDIN to Input part of pipe
+			// 	dup2(pipe[0], STDIN_FILENO);
+			// 	// closing pipe write
+			// 	close(pipe[1]);
+			// 	// close read pipe
+			// 	close(pipe[0]);
+			// }
+			// else if (pipe_FLAG == WRITE_FLAG) {
+			// 	// agar samne se bola hai pipe me write kar then
+			// 	// Redirect STDOUT to output part of pipe
+			// 	dup2(pipe[1], STDOUT_FILENO);
+			// 	// close pipe read
+			// 	close(pipe[0]);
+			// 	// close write pipe
+			// 	close(pipe[1]);
+			// }
+			// else {
+			// 	// handle pipes
+			// 	// close pipes
+			// 	// execute commands
+			// }
 
-	// 	for (int i = 0; i < array_size; i++) {
-	// 		printf("Redirection Token : %s\n",cmd_tokens_array[i]);
-	// 	}
-		printf("Redirection Token Idx : %d\n", token_idx);
-		printf("oflag : %d\n", oflag);
-		printf("file_descriptor : %d\n", file_descriptor);
-		printf("new_file_descriptor : %d\n", new_file_descriptor);
+			if (pipe_FLAG == READ_FLAG) {
+				/* code */
+			}
+			else if (pipe_FLAG == READ_FLAG) {
+				/* code */
+			}
+			else {
+				// this function has been called from child
+				// do not create another child
+				// handle pipes
+				// close pipes
+				// execute commands
+			}
+
+			if (pipe(my_pipe)<0) {
+				perror("Error :: Pipe Failed.\n");
+				return ERROR;
+			}
+
+			char string[FL_LINE_LEN];
+			FILE *file;
+
+			if (strcmp(oflag, "r") == 0) {
+				// Child process closes up input side of pipe one
+				close(my_pipe[0]);
+				file = fopen(cmd_tokens_array[1], oflag);
+				if (file) {
+					// scanning from file
+					while (fscanf(file, "%s\n", string) != EOF) {
+						// strcat(var, string);
+						write(my_pipe[1], string, FL_LINE_LEN);
+					}
+					fclose(file);
+					dup2(my_pipe[1], STDOUT_FILENO);
+					close(my_pipe[1]);
+				}
+				return execute_shell_cmd_with_space(cmd_tokens_array[0], sub_cmd_delimit, my_pipe, READ_FLAG);
+			}
+			else if (strcmp(oflag, "w") == 0) {
+
+				/* code */
+			}
+
+
+		}
+		else {
+			wait(NULL);
+		}
 	}
 
 	return CONTINUE;
@@ -422,8 +544,7 @@ int process_shell_cmd(char *shell_name) {
 	}
 	else {
 		// dummy pipes
-		int pipe_one[2];
-		int pipe_two[2];
+		int pipe[2];
 
 		// DELIMIT_Count *cmd_delimit = (DELIMIT_Count*)malloc(1 * sizeof(DELIMIT_Count));
 		DELIMIT_Count cmd_delimit;
@@ -459,21 +580,21 @@ int process_shell_cmd(char *shell_name) {
 		}
 		else if ((cmd_delimit.in_re_count > 0)||(cmd_delimit.out_re_count > 0)) {
 			// input-output redirection
-			func_ret = execute_shell_cmd_redirection(cmd_line_buff, cmd_delimit, pipe_one, pipe_two, NO_FLAG);
+			func_ret = execute_shell_cmd_redirection(cmd_line_buff, cmd_delimit, pipe, NO_FLAG);
 			if (func_ret==ERROR) {
 				return ERROR;
 			}
 		}
 		else if (cmd_delimit.space_count > 0) {
 			// only spaces
-			func_ret = execute_shell_cmd_with_space(cmd_line_buff, cmd_delimit, pipe_one, pipe_two, NO_FLAG);
+			func_ret = execute_shell_cmd_with_space(cmd_line_buff, cmd_delimit, pipe, NO_FLAG);
 			if (func_ret==ERROR) {
 				return ERROR;
 			}
 		}
 		else {
 			// single cmd
-			func_ret = execute_shell_single_cmd(cmd_line_buff, pipe_one, pipe_two, NO_FLAG);
+			func_ret = execute_shell_single_cmd(cmd_line_buff, pipe, NO_FLAG);
 			if (func_ret==ERROR) {
 				return ERROR;
 			}

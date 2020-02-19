@@ -35,4 +35,4 @@ Commands Supported
 
 - Internal commands: cd, pwd, echo, exit or Ctrl+C, help etc
 - Clear Screen     : clear, reset
-- Variable Substitution : echo $USER
+- Variable Substitution : echo $USER (substitution of max CMD_LEN characters)
