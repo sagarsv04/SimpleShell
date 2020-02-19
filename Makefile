@@ -1,6 +1,6 @@
 # Make file for building application
 
-CC = g++
+CC = gcc
 CFLAGS = -Wall -Werror
 DEPS = mysh.h
 

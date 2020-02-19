@@ -15,8 +15,8 @@
 #define TRUE 1
 #define FALSE 0
 
-// #define DEBUG_PRINT TRUE
-#define DEBUG_PRINT FALSE
+#define DEBUG_PRINT TRUE
+// #define DEBUG_PRINT FALSE
 
 
 // #define NUMBER_OF_CMD_TOKENS 8
@@ -73,6 +73,8 @@ int execute_shell_single_cmd(char *cmd_line_buff, int pipe_FLAG);
 int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG);
 // int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit);
 int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG);
+
+int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG);
 
 int process_shell_cmd(char *shell_name);
 

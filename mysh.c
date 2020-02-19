@@ -19,6 +19,8 @@
 #include "mysh.h"
 
 
+// dont use return func call
+
 void print_shell_name(char *shell_name) {
 	printf("\n%s>", shell_name);
 }
@@ -95,7 +97,7 @@ void check_variable_substitution(char *cmd_token) {
 			strcpy(cmd_token, "\0");
 		}
 		else if (strlen(subs)>CMD_LEN) {
-			subs[CMD_LEN-1] = '\0';
+			subs[CMD_LEN-3] = '\0';
 			strcpy(cmd_token, subs);
 		}
 		else {
@@ -402,8 +404,10 @@ int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit
 		char cmd_tokens_array[array_size][CMD_LEN];
 
 		split_shell_cmd_by_delimit(cmd_line_buff, cmd_tokens_array, cmd_delimit, redirection);
-		remove_white_spaces(cmd_tokens_array[0]);
-		remove_white_spaces(cmd_tokens_array[1]);
+
+		for (int i = 0; i < array_size; i++) {
+			remove_white_spaces(cmd_tokens_array[i]);
+		}
 
 		DELIMIT_Count sub_cmd_delimit;
 		clear_all_delimiters_count(&sub_cmd_delimit);
@@ -446,7 +450,7 @@ int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit
 				if (file_disc < 0) {
 					perror("Error :: Failed reading file.\n");
 					fprintf(stderr, "File : %s\n",cmd_tokens_array[1]);
-        	return ERROR;
+					return ERROR;
 				}
 				else{
 					dup2(file_disc, STDIN_FILENO);
@@ -461,11 +465,11 @@ int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit
 				if (file_disc < 0) {
 					perror("Error :: Failed creating file.\n");
 					fprintf(stderr, "File : %s\n",cmd_tokens_array[1]);
-        	return ERROR;
+					return ERROR;
 				}
 				else{
 					dup2(file_disc, STDOUT_FILENO);
-        	close(file_disc);
+					close(file_disc);
 				}
 				return execute_shell_cmd_with_space(cmd_tokens_array[0], sub_cmd_delimit, WRITE_FLAG);
 			}
@@ -474,6 +478,68 @@ int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit
 			wait(NULL);
 		}
 	}
+
+	return CONTINUE;
+}
+
+
+int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG) {
+
+	char pipe_delimit[] = "|";
+	int array_size = cmd_delimit.pipe_count+1;
+
+	if (DEBUG_PRINT) {
+		printf("Pipe Delimit is : <%s>\n", pipe_delimit);
+	}
+
+	char cmd_tokens_array[array_size][CMD_LEN];
+
+	split_shell_cmd_by_delimit(cmd_line_buff, cmd_tokens_array, cmd_delimit, pipe_delimit);
+
+	for (int i = 0; i < array_size; i++) {
+		remove_white_spaces(cmd_tokens_array[i]);
+	}
+
+	DELIMIT_Count left_cmd_delimit;
+	DELIMIT_Count right_cmd_delimit;
+	clear_all_delimiters_count(&left_cmd_delimit);
+	clear_all_delimiters_count(&right_cmd_delimit);
+	count_all_delimiters(cmd_tokens_array[0], &left_cmd_delimit);
+	count_all_delimiters(cmd_tokens_array[1], &right_cmd_delimit);
+
+	int pipe_fd[2];
+
+	if (pipe(pipe_fd)<0) {
+		perror("Error :: Pipe Failed.\n");
+		return ERROR;
+	}
+	// create a child process using fork for space arg
+	pid_t pid = fork();
+
+	if (pid < 0) {
+		perror("Error :: Failed forking child.\n");
+		return ERROR;
+	}
+	else if (pid == 0) {
+		// call same func as child with left side
+		// replace stdout with the write end of the pipe
+    dup2(pipe_fd[1],STDOUT_FILENO);
+  	// close read to pipe, in child
+    close(pipe_fd[0]);
+
+    return execute_shell_cmd_with_space(cmd_tokens_array[0], left_cmd_delimit, WRITE_FLAG);
+	}
+	else {
+		wait(NULL);
+		// call same func as parent with right side
+		// replace stdin with the read end of the pipe
+		dup2(pipe_fd[0],STDIN_FILENO);
+		// close write to pipe, in parent
+		close(pipe_fd[1]);
+
+		return execute_shell_cmd_with_space(cmd_tokens_array[1], right_cmd_delimit, READ_FLAG);
+  }
+
 
 	return CONTINUE;
 }
@@ -517,7 +583,10 @@ int process_shell_cmd(char *shell_name) {
 
 		if (cmd_delimit.pipe_count > 0) {
 			// pipes plus spaces
-			;
+			func_ret = execute_shell_cmd_pipes(cmd_line_buff, cmd_delimit, NO_FLAG);
+			if (func_ret==ERROR) {
+				return ERROR;
+			}
 		}
 		else if ((cmd_delimit.in_re_count > 0)||(cmd_delimit.out_re_count > 0)) {
 			// input-output redirection
