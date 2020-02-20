@@ -20,6 +20,9 @@
 
 
 // dont use return func call
+// dont run execv in parent or else it will terminate
+// we need pipe sharing in funct calls
+// we need fork inside fork
 
 void print_shell_name(char *shell_name) {
 	printf("\n%s>", shell_name);
@@ -263,7 +266,24 @@ int execute_shell_single_cmd(char *cmd_line_buff, int pipe_FLAG) {
 		else {
 			if ((strcmp(cmd_line_buff, "clear")==0)||
 					(strcmp(cmd_line_buff, "reset")==0)||
-					(strcmp(cmd_line_buff, "whoami")==0)) {
+					(strcmp(cmd_line_buff, "touch")==0)||
+					(strcmp(cmd_line_buff, "head")==0)||
+					(strcmp(cmd_line_buff, "tail")==0)||
+					(strcmp(cmd_line_buff, "comm")==0)||
+					(strcmp(cmd_line_buff, "less")==0)||
+					(strcmp(cmd_line_buff, "cmp")==0)||
+					(strcmp(cmd_line_buff, "cal")==0)||
+					(strcmp(cmd_line_buff, "yes")==0)||
+					(strcmp(cmd_line_buff, "rev")==0)||
+					(strcmp(cmd_line_buff, "wget")==0)||
+					(strcmp(cmd_line_buff, "find")==0)||
+					(strcmp(cmd_line_buff, "which")==0)||
+					(strcmp(cmd_line_buff, "locate")==0)||
+					(strcmp(cmd_line_buff, "sort")==0)||
+					(strcmp(cmd_line_buff, "sudo")==0)||
+					(strcmp(cmd_line_buff, "man")==0)||
+					(strcmp(cmd_line_buff, "whatis")==0)||
+					(strcmp(cmd_line_buff, "whoami")==0)){
 				strcat(exe_path, user_path);
 				strcat(exe_path, cmd_line_buff);
 			}
