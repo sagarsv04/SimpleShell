@@ -526,6 +526,7 @@ int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int 
 
 	char cmd_tokens_array[array_size][CMD_LEN];
 
+	// int token_idx = split_shell_cmd_by_delimit(cmd_line_buff, cmd_tokens_array, cmd_delimit, pipe_delimit);
 	split_shell_cmd_by_delimit(cmd_line_buff, cmd_tokens_array, cmd_delimit, pipe_delimit);
 
 	for (int i = 0; i < array_size; i++) {
@@ -570,6 +571,20 @@ int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int 
 		if (func_ret==ERROR) {
 			return ERROR;
 		}
+
+		// pid_t pid = fork();
+		// if (pid < 0) {
+		// 	perror("Error :: Failed forking child.\n");
+		// 	return ERROR;
+		// }
+		// else if (pid == 0) {
+		// 	// call same func as parent with right side
+		// 	// replace stdin with the read end of the pipe
+		// 	dup2(pipe_fd[0],STDIN_FILENO);
+		// 	// close write to pipe, in parent
+		// 	close(pipe_fd[1]);
+		// 	return execute_shell_cmd_with_space(cmd_tokens_array[1], right_cmd_delimit, READ_FLAG);
+		// }
 		else {
 			wait(NULL);
 		}
