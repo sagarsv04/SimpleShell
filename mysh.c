@@ -28,6 +28,7 @@ void print_shell_name(char *shell_name) {
 	printf("\n%s>", shell_name);
 }
 
+
 void clear_shell() {
 	printf("\033[H\033[J");
 }
@@ -322,7 +323,9 @@ int execute_shell_single_cmd(char *cmd_line_buff, int pipe_FLAG) {
 					return ERROR;
 				}
 				else if (pid == 0) {
-
+					if (FORK_SLEEP) {
+						sleep(SLEEP);
+					}
 					execv(args[0], args);
 					perror("Error :: Invalid Input.\n");
 					return ERROR;
@@ -368,7 +371,9 @@ int execute_args(char **args, int pipe_FLAG) {
 				return ERROR;
 			}
 			else if (pid == 0) {
-
+				if (FORK_SLEEP) {
+					sleep(SLEEP);
+				}
 				execvp(args[0], args);
 				perror("Error :: Invalid Input.\n");
 				return ERROR;
@@ -380,7 +385,6 @@ int execute_args(char **args, int pipe_FLAG) {
 	}
 	return CONTINUE;
 }
-
 
 
 int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG) {
@@ -473,7 +477,9 @@ int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit
 			return ERROR;
 		}
 		else if (pid == 0) {
-
+			if (FORK_SLEEP) {
+				sleep(SLEEP);
+			}
 			int file_disc;
 
 			if (strcmp(oflag, "r") == 0) {
@@ -561,6 +567,9 @@ int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int 
 			return ERROR;
 		}
 		else if (pid == 0) {
+			if (FORK_SLEEP) {
+				sleep(SLEEP);
+			}
 			/* child gets input from the previous command, if it's not the first command */
 			if(cmd_idx!=0) {
 				if(dup2(pipe_fd[(cmd_idx-1)*2], STDIN_FILENO) < 0) {
@@ -588,6 +597,7 @@ int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int 
 			// perror
 		}
 		else {
+			// wait till the last child exit or it will become a zombie process
 			wait(NULL);
 		}
 	}
