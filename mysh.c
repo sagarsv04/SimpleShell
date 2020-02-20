@@ -294,11 +294,11 @@ int execute_shell_single_cmd(char *cmd_line_buff, int pipe_FLAG) {
 				strcat(exe_path, cmd_line_buff);
 			}
 
-			if (DEBUG_PRINT) {
-				printf("Executing Path : <%s>\n", exe_path);
-			}
-
 			char *args[] = {exe_path, NULL};
+
+			if (DEBUG_PRINT) {
+				printf("Executing Cmd Path : <%s>\n", args[0]);
+			}
 
 			if (pipe_FLAG==READ_FLAG) {
 				// do not fork as the process is already forked
@@ -341,12 +341,18 @@ int execute_shell_single_cmd(char *cmd_line_buff, int pipe_FLAG) {
 }
 
 
-int execute_args(char **args, int pipe_FLAG) {
+int execute_args(char **args, int num_cmd, int pipe_FLAG) {
 
 	if (strcmp(args[0], "cd") == 0) {
 		return change_dir(args[1]);
 	}
 	else {
+
+		if (DEBUG_PRINT) {
+			for (int i=0; i<num_cmd; i++) {
+				printf("Executing Cmd %d: <%s>\n", i, args[i]);
+			}
+		}
 
 		if (pipe_FLAG==READ_FLAG) {
 			// do not fork as the process is already forked
@@ -408,19 +414,19 @@ int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count cmd_delimit,
 		// // find a better way to do this
 		if (token_idx==2) {
 			char *args[] = {cmd_tokens_array[0], cmd_tokens_array[1], NULL}; // this works
-			return execute_args(args, pipe_FLAG);
+			return execute_args(args, token_idx, pipe_FLAG);
 		}
 		else if (token_idx==3) {
 			char *args[] = {cmd_tokens_array[0], cmd_tokens_array[1], cmd_tokens_array[2], NULL}; // this works
-			return execute_args(args, pipe_FLAG);
+			return execute_args(args, token_idx, pipe_FLAG);
 		}
 		else if (token_idx==4) {
 			char *args[] = {cmd_tokens_array[0], cmd_tokens_array[1], cmd_tokens_array[2], cmd_tokens_array[3], NULL}; // this works
-			return execute_args(args, pipe_FLAG);
+			return execute_args(args, token_idx, pipe_FLAG);
 		}
 		else if (token_idx==5) {
 			char *args[] = {cmd_tokens_array[0], cmd_tokens_array[1], cmd_tokens_array[2], cmd_tokens_array[3], cmd_tokens_array[4], NULL}; // this works
-			return execute_args(args, pipe_FLAG);
+			return execute_args(args, token_idx, pipe_FLAG);
 		}
 	}
 
