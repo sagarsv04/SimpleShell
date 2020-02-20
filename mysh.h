@@ -20,8 +20,8 @@
 // #define DEBUG_PRINT TRUE
 #define DEBUG_PRINT FALSE
 
-#define FORK_SLEEP TRUE  // child proccess sleeps befor executing
-// #define FORK_SLEEP FALSE
+// #define FORK_SLEEP TRUE  // child proccess sleeps befor executing
+#define FORK_SLEEP FALSE
 
 
 // #define NUMBER_OF_CMD_TOKENS 8

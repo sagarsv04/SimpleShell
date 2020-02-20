@@ -526,7 +526,8 @@ int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int 
 	char pipe_delimit[] = "|";
 	// int func_ret;
 	int array_size = cmd_delimit.pipe_count+1;
-	int pipe_fd[2*cmd_delimit.pipe_count];
+	// int pipe_fd[2*cmd_delimit.pipe_count];
+	int pipe_fd[2][cmd_delimit.pipe_count];
 
 	if (DEBUG_PRINT) {
 		printf("Pipe Delimit is : <%s>\n", pipe_delimit);
@@ -542,7 +543,7 @@ int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int 
 
 	/* parent creates all needed pipes at the start */
 	for(int i=0; i<cmd_delimit.pipe_count; i++) {
-		if(pipe(pipe_fd + i*2)<0) {
+		if(pipe(pipe_fd[i])<0) {
 			perror("Error :: Pipe Failed.\n");
 			return ERROR;
 		}
@@ -555,8 +556,8 @@ int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int 
 		count_all_delimiters(cmd_tokens_array[cmd_idx], &sub_cmd_delimit);
 
 		if (DEBUG_PRINT) {
-			for(int i=0; i<2*cmd_delimit.pipe_count; i++) {
-			  printf("Pipes before fork %d : %d\n", i, pipe_fd[i]);
+			for(int i=0; i<cmd_delimit.pipe_count; i++) {
+			  printf("Pipes before fork %d : R-%d, W-%d\n", i, pipe_fd[i][0], pipe_fd[i][1]);
 			}
 		}
 		// create a child process using fork for space arg
@@ -571,25 +572,25 @@ int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int 
 				sleep(SLEEP);
 			}
 			/* child gets input from the previous command, if it's not the first command */
-			if(cmd_idx!=0) {
-				if(dup2(pipe_fd[(cmd_idx-1)*2], STDIN_FILENO) < 0) {
+			if(cmd_idx > 0) {
+				if(dup2(pipe_fd[cmd_idx][0], STDIN_FILENO) < 0) {
 					perror("Error :: DUP Failed.\n");
 					return ERROR;
 				}
 			}
 			/* child outputs to next command, if it's not the last command */
-			if(cmd_idx!=cmd_delimit.pipe_count) {
-				if(dup2(pipe_fd[cmd_idx*2+1], STDOUT_FILENO) < 0) {
+			if(cmd_idx < cmd_delimit.pipe_count) {
+				if(dup2(pipe_fd[cmd_idx][1], STDOUT_FILENO) < 0) {
 					perror("Error :: DUP Failed.\n");
 					return ERROR;
 				}
 			}
-			close(pipe_fd[cmd_idx*2]);
-			close(pipe_fd[(cmd_idx*2)+1]);
+			close(pipe_fd[cmd_idx][0]);
+			close(pipe_fd[cmd_idx][1]);
 			// close all the pipes
 			if (DEBUG_PRINT) {
-				for(int i=0; i<2*cmd_delimit.pipe_count; i++) {
-				  printf("Pipes after fork %d : %d\n", i, pipe_fd[i]);
+				for(int i=0; i<cmd_delimit.pipe_count; i++) {
+				  printf("Pipes after fork %d : R-%d, W-%d\n", i, pipe_fd[i][0], pipe_fd[i][1]);
 				}
 			}
 			// execute
@@ -603,8 +604,9 @@ int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int 
 	}
 
 	/* parent closes all of its copies at the end */
-	for(int i=0; i<2*cmd_delimit.pipe_count; i++) {
-	  close(pipe_fd[i]);
+	for(int i=0; i<cmd_delimit.pipe_count; i++) {
+	  close(pipe_fd[i][0]);
+	  close(pipe_fd[i][1]);
 	}
 
 	return CONTINUE;
