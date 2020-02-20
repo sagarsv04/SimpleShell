@@ -233,6 +233,7 @@ int split_shell_cmd_by_delimit(char *cmd_line_buff, char cmd_tokens_array[][CMD_
 				fprintf(stderr, "mysh>Error :: Commands Size Exceeded :: %s\n", token_ptr);
 			}
 			else {
+				remove_white_spaces(token_ptr);
 				strcpy(cmd_tokens_array[token_idx], token_ptr);
 				token_idx++;
 			}
@@ -456,9 +457,9 @@ int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit
 
 		split_shell_cmd_by_delimit(cmd_line_buff, cmd_tokens_array, cmd_delimit, redirection);
 
-		for (int i = 0; i < array_size; i++) {
-			remove_white_spaces(cmd_tokens_array[i]);
-		}
+		// for (int i = 0; i < array_size; i++) {
+		// 	remove_white_spaces(cmd_tokens_array[i]);
+		// }
 
 		DELIMIT_Count sub_cmd_delimit;
 		clear_all_delimiters_count(&sub_cmd_delimit);
@@ -529,9 +530,9 @@ int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int 
 	// int token_idx = split_shell_cmd_by_delimit(cmd_line_buff, cmd_tokens_array, cmd_delimit, pipe_delimit);
 	split_shell_cmd_by_delimit(cmd_line_buff, cmd_tokens_array, cmd_delimit, pipe_delimit);
 
-	for (int i=0; i < array_size; i++) {
-		remove_white_spaces(cmd_tokens_array[i]);
-	}
+	// for (int i=0; i < array_size; i++) {
+	// 	remove_white_spaces(cmd_tokens_array[i]);
+	// }
 
 	/* parent creates all needed pipes at the start */
 	for(int i=0; i<cmd_delimit.pipe_count; i++) {
@@ -546,6 +547,12 @@ int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int 
 		DELIMIT_Count sub_cmd_delimit;
 		clear_all_delimiters_count(&sub_cmd_delimit);
 		count_all_delimiters(cmd_tokens_array[cmd_idx], &sub_cmd_delimit);
+
+		if (DEBUG_PRINT) {
+			for(int i=0; i<2*cmd_delimit.pipe_count; i++) {
+			  printf("Pipes before fork %d : %d\n", i, pipe_fd[i]);
+			}
+		}
 		// create a child process using fork for space arg
 		pid_t pid = fork();
 
@@ -571,6 +578,11 @@ int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int 
 			close(pipe_fd[cmd_idx*2]);
 			close(pipe_fd[(cmd_idx*2)+1]);
 			// close all the pipes
+			if (DEBUG_PRINT) {
+				for(int i=0; i<2*cmd_delimit.pipe_count; i++) {
+				  printf("Pipes after fork %d : %d\n", i, pipe_fd[i]);
+				}
+			}
 			// execute
 			execute_shell_cmd_with_space(cmd_tokens_array[cmd_idx], sub_cmd_delimit, READ_FLAG);
 			// perror
