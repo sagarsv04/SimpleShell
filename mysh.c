@@ -337,6 +337,51 @@ int execute_shell_single_cmd(char *cmd_line_buff, int pipe_FLAG) {
 }
 
 
+int execute_args(char **args, int pipe_FLAG) {
+
+	if (strcmp(args[0], "cd") == 0) {
+		return change_dir(args[1]);
+	}
+	else {
+
+		if (pipe_FLAG==READ_FLAG) {
+			// do not fork as the process is already forked
+			// just handle stdout, sdtin
+			execvp(args[0], args);
+			perror("Error :: Invalid Input with R.\n");
+			return ERROR;
+		}
+		else if (pipe_FLAG==WRITE_FLAG) {
+			// do not fork as the process is already forked
+			// just handle stdout, sdtin
+			execvp(args[0], args);
+			perror("Error :: Invalid Input with WR.\n");
+			return ERROR;
+		}
+		else {
+			// create a child process using fork for space arg
+			pid_t pid = fork();
+
+			if (pid < 0) {
+				perror("Error :: Failed forking child.\n");
+				return ERROR;
+			}
+			else if (pid == 0) {
+
+				execvp(args[0], args);
+				perror("Error :: Invalid Input.\n");
+				return ERROR;
+			}
+			else {
+				wait(NULL);
+			}
+		}
+	}
+	return CONTINUE;
+}
+
+
+
 int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG) {
 
 	if (DEBUG_PRINT) {
@@ -355,46 +400,22 @@ int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count cmd_delimit,
 	else {
 		// replace $__ with value
 		check_variable_substitution(cmd_tokens_array[1]);
-
-		char *args[] = {cmd_tokens_array[0], cmd_tokens_array[1], NULL};
-
-		if (strcmp(args[0], "cd") == 0) {
-			return change_dir(args[1]);
+		// // find a better way to do this
+		if (token_idx==2) {
+			char *args[] = {cmd_tokens_array[0], cmd_tokens_array[1], NULL}; // this works
+			return execute_args(args, pipe_FLAG);
 		}
-		else {
-
-			if (pipe_FLAG==READ_FLAG) {
-				// do not fork as the process is already forked
-				// just handle stdout, sdtin
-				execvp(args[0], args);
-				perror("Error :: Invalid Input with R.\n");
-				return ERROR;
-			}
-			else if (pipe_FLAG==WRITE_FLAG) {
-				// do not fork as the process is already forked
-				// just handle stdout, sdtin
-				execvp(args[0], args);
-				perror("Error :: Invalid Input with WR.\n");
-				return ERROR;
-			}
-			else {
-				// create a child process using fork for space arg
-				pid_t pid = fork();
-
-				if (pid < 0) {
-					perror("Error :: Failed forking child.\n");
-					return ERROR;
-				}
-				else if (pid == 0) {
-
-					execvp(args[0], args);
-					perror("Error :: Invalid Input.\n");
-					return ERROR;
-				}
-				else {
-					wait(NULL);
-				}
-			}
+		else if (token_idx==3) {
+			char *args[] = {cmd_tokens_array[0], cmd_tokens_array[1], cmd_tokens_array[2], NULL}; // this works
+			return execute_args(args, pipe_FLAG);
+		}
+		else if (token_idx==4) {
+			char *args[] = {cmd_tokens_array[0], cmd_tokens_array[1], cmd_tokens_array[2], cmd_tokens_array[3], NULL}; // this works
+			return execute_args(args, pipe_FLAG);
+		}
+		else if (token_idx==5) {
+			char *args[] = {cmd_tokens_array[0], cmd_tokens_array[1], cmd_tokens_array[2], cmd_tokens_array[3], cmd_tokens_array[4], NULL}; // this works
+			return execute_args(args, pipe_FLAG);
 		}
 	}
 
