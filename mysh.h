@@ -15,7 +15,7 @@
 #define TRUE 1
 #define FALSE 0
 
-#define SLEEP 5
+#define SLEEP 2
 
 // #define DEBUG_PRINT TRUE
 #define DEBUG_PRINT FALSE
@@ -81,6 +81,9 @@ int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count cmd_delimit,
 int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG);
 
 int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG);
+
+int execute_shell_cmd_pipes_loop(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG);
+int execute_shell_cmd_pipes_loop_new(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG);
 
 int process_shell_cmd(char *shell_name);
 

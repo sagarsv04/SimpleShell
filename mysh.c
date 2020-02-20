@@ -526,13 +526,10 @@ int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit
 	return CONTINUE;
 }
 
-
-int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG) {
+int execute_shell_cmd_pipes_loop(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG) {
 
 	char pipe_delimit[] = "|";
-	// int func_ret;
 	int array_size = cmd_delimit.pipe_count+1;
-	// int pipe_fd[2*cmd_delimit.pipe_count];
 	int pipe_fd[2][cmd_delimit.pipe_count];
 
 	if (DEBUG_PRINT) {
@@ -540,12 +537,7 @@ int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int 
 	}
 
 	char cmd_tokens_array[array_size][CMD_LEN];
-	// int token_idx = split_shell_cmd_by_delimit(cmd_line_buff, cmd_tokens_array, cmd_delimit, pipe_delimit);
 	split_shell_cmd_by_delimit(cmd_line_buff, cmd_tokens_array, cmd_delimit, pipe_delimit);
-
-	// for (int i=0; i < array_size; i++) {
-	// 	remove_white_spaces(cmd_tokens_array[i]);
-	// }
 
 	/* parent creates all needed pipes at the start */
 	for(int i=0; i<cmd_delimit.pipe_count; i++) {
@@ -619,6 +611,166 @@ int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int 
 }
 
 
+int execute_shell_cmd_pipes_loop_new(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG) {
+
+	char pipe_delimit[] = "|";
+	int array_size = cmd_delimit.pipe_count+1;
+	int pipe_fd[cmd_delimit.pipe_count][2];
+
+	if (DEBUG_PRINT) {
+		printf("Pipe Delimit is : <%s>\n", pipe_delimit);
+	}
+
+	char cmd_tokens_array[array_size][CMD_LEN];
+	split_shell_cmd_by_delimit(cmd_line_buff, cmd_tokens_array, cmd_delimit, pipe_delimit);
+
+	/* parent creates all needed pipes at the start */
+	for(int i=0; i<cmd_delimit.pipe_count; i++) {
+		if(pipe(pipe_fd[i])<0) {
+			perror("Error :: Pipe Failed.\n");
+			return ERROR;
+		}
+	}
+
+	for (int cmd_idx=0; cmd_idx<array_size; cmd_idx++) {
+
+		DELIMIT_Count sub_cmd_delimit;
+		clear_all_delimiters_count(&sub_cmd_delimit);
+		count_all_delimiters(cmd_tokens_array[cmd_idx], &sub_cmd_delimit);
+
+		if (DEBUG_PRINT) {
+			for(int i=0; i<cmd_delimit.pipe_count; i++) {
+			  printf("Pipes before fork %d : R-%d, W-%d\n", i, pipe_fd[i][0], pipe_fd[i][1]);
+			}
+		}
+		// create a child process using fork for space arg
+		pid_t pid = fork();
+
+		if (pid < 0) {
+			perror("Error :: Failed forking child.\n");
+			return ERROR;
+		}
+		else if (pid == 0) {
+			if (FORK_SLEEP) {
+				sleep(SLEEP);
+			}
+			/* child gets input from the previous command, if it's not the first command */
+			if(cmd_idx > 0) {
+				if(dup2(pipe_fd[cmd_idx][0], STDIN_FILENO) < 0) {
+					perror("Error :: DUP Failed.\n");
+					return ERROR;
+				}
+			}
+			/* child outputs to next command, if it's not the last command */
+			if(cmd_idx < cmd_delimit.pipe_count) {
+				if(dup2(pipe_fd[cmd_idx][1], STDOUT_FILENO) < 0) {
+					perror("Error :: DUP Failed.\n");
+					return ERROR;
+				}
+			}
+			close(pipe_fd[cmd_idx][0]);
+			close(pipe_fd[cmd_idx][1]);
+			// close all the pipes
+			if (DEBUG_PRINT) {
+				for(int i=0; i<cmd_delimit.pipe_count; i++) {
+				  printf("Pipes after fork %d : R-%d, W-%d\n", i, pipe_fd[i][0], pipe_fd[i][1]);
+				}
+			}
+			// execute
+			execute_shell_cmd_with_space(cmd_tokens_array[cmd_idx], sub_cmd_delimit, READ_FLAG);
+			// perror
+		}
+		else {
+			// wait till the last child exit or it will become a zombie process
+			wait(NULL);
+		}
+	}
+
+	/* parent closes all of its copies at the end */
+	for(int i=0; i<cmd_delimit.pipe_count; i++) {
+	  close(pipe_fd[i][0]);
+	  close(pipe_fd[i][1]);
+	}
+
+	return CONTINUE;
+}
+
+
+int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG) {
+
+	char pipe_delimit[] = "|";
+	// int func_ret;
+	int array_size = cmd_delimit.pipe_count+1;
+	// int pipe_fd[2*cmd_delimit.pipe_count];
+	int pipe_fd[2][cmd_delimit.pipe_count];
+
+	if (DEBUG_PRINT) {
+		printf("Pipe Delimit is : <%s>\n", pipe_delimit);
+	}
+
+	char cmd_tokens_array[array_size][CMD_LEN];
+	split_shell_cmd_by_delimit(cmd_line_buff, cmd_tokens_array, cmd_delimit, pipe_delimit);
+
+	if (cmd_delimit.pipe_count<2) {
+
+		DELIMIT_Count left_cmd_delimit;
+		DELIMIT_Count right_cmd_delimit;
+		clear_all_delimiters_count(&left_cmd_delimit);
+		clear_all_delimiters_count(&right_cmd_delimit);
+		count_all_delimiters(cmd_tokens_array[0], &left_cmd_delimit);
+		count_all_delimiters(cmd_tokens_array[1], &right_cmd_delimit);
+
+		if (pipe(pipe_fd[0]) < 0) {
+			perror("Error :: Pipe Failed.\n");
+			return ERROR;
+		}
+		pid_t pid = fork();
+
+		if (pid < 0) {
+			perror("Error :: Failed forking child.\n");
+			return ERROR;
+		}
+		else if (pid == 0) {
+			if (FORK_SLEEP) {
+				sleep(SLEEP);
+			}
+			dup2(pipe_fd[0][1], STDOUT_FILENO);
+			close(pipe_fd[0][0]);
+			close(pipe_fd[0][1]);
+			return execute_shell_cmd_with_space(cmd_tokens_array[0], left_cmd_delimit, WRITE_FLAG);
+		}
+		else {
+			wait(NULL);
+			pid_t pid = fork();
+
+			if (pid < 0) {
+				perror("Error :: Failed forking child.\n");
+				return ERROR;
+			}
+			else if (pid == 0) {
+				if (FORK_SLEEP) {
+					sleep(SLEEP);
+				}
+				dup2(pipe_fd[0][0], STDIN_FILENO);
+				close(pipe_fd[0][1]);
+				close(pipe_fd[0][0]);
+				return execute_shell_cmd_with_space(cmd_tokens_array[1], right_cmd_delimit, READ_FLAG);
+			}
+			else {
+				wait(NULL);
+			}
+			close(pipe_fd[0][0]);
+			close(pipe_fd[0][1]);
+		}
+	}
+	else{
+		fprintf(stderr, "Error :: Sorry Support upto single | pipe.\n");
+	}
+
+	return CONTINUE;
+}
+
+
 int process_shell_cmd(char *shell_name) {
 
 	char *cmd_line_buff = (char*)malloc(CMD_LINE_LEN * sizeof(char));
@@ -638,7 +790,8 @@ int process_shell_cmd(char *shell_name) {
 
 		if (cmd_delimit.pipe_count > 0) {
 			// pipes plus spaces
-			func_ret = execute_shell_cmd_pipes(cmd_line_buff, cmd_delimit, NO_FLAG);
+			// func_ret = execute_shell_cmd_pipes(cmd_line_buff, cmd_delimit, NO_FLAG);
+			func_ret = execute_shell_cmd_pipes_loop_new(cmd_line_buff, cmd_delimit, NO_FLAG);
 			if (func_ret==ERROR) {
 				return ERROR;
 			}
