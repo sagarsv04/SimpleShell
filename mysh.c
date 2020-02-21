@@ -324,6 +324,7 @@ int execute_shell_single_cmd(char *cmd_line_buff, int pipe_FLAG) {
 				}
 				else if (pid == 0) {
 					if (FORK_SLEEP) {
+						printf("Sleep of %ds in child process\n", SLEEP);
 						sleep(SLEEP);
 					}
 					execv(args[0], args);
@@ -378,6 +379,7 @@ int execute_args(char **args, int num_cmd, int pipe_FLAG) {
 			}
 			else if (pid == 0) {
 				if (FORK_SLEEP) {
+					printf("Sleep of %ds in child process\n", SLEEP);
 					sleep(SLEEP);
 				}
 				execvp(args[0], args);
@@ -467,59 +469,64 @@ int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit
 
 		split_shell_cmd_by_delimit(cmd_line_buff, cmd_tokens_array, cmd_delimit, redirection);
 
-		// for (int i = 0; i < array_size; i++) {
-		// 	remove_white_spaces(cmd_tokens_array[i]);
-		// }
-
 		DELIMIT_Count sub_cmd_delimit;
 		clear_all_delimiters_count(&sub_cmd_delimit);
 		count_all_delimiters(cmd_tokens_array[0], &sub_cmd_delimit);
 
-		// create a child process using fork for space arg
-		pid_t pid = fork();
-
-		if (pid < 0) {
-			perror("Error :: Failed forking child.\n");
-			return ERROR;
+		if (pipe_FLAG==READ_FLAG) {
+			/* code */
 		}
-		else if (pid == 0) {
-			if (FORK_SLEEP) {
-				sleep(SLEEP);
-			}
-			int file_disc;
-
-			if (strcmp(oflag, "r") == 0) {
-
-				file_disc = open(cmd_tokens_array[1], O_RDONLY);
-				if (file_disc < 0) {
-					perror("Error :: Failed reading file.\n");
-					fprintf(stderr, "File : %s\n",cmd_tokens_array[1]);
-					return ERROR;
-				}
-				else{
-					dup2(file_disc, STDIN_FILENO);
-					close(file_disc);
-				}
-				return execute_shell_cmd_with_space(cmd_tokens_array[0], sub_cmd_delimit, READ_FLAG);
-			}
-			else if (strcmp(oflag, "w") == 0) {
-
-				fprintf(stderr, "File trying to create : %s\n",cmd_tokens_array[1]);
-				file_disc = creat(cmd_tokens_array[1], 0644);
-				if (file_disc < 0) {
-					perror("Error :: Failed creating file.\n");
-					fprintf(stderr, "File : %s\n",cmd_tokens_array[1]);
-					return ERROR;
-				}
-				else{
-					dup2(file_disc, STDOUT_FILENO);
-					close(file_disc);
-				}
-				return execute_shell_cmd_with_space(cmd_tokens_array[0], sub_cmd_delimit, WRITE_FLAG);
-			}
+		else if (pipe_FLAG==WRITE_FLAG) {
+			/* code */
 		}
 		else {
-			wait(NULL);
+			// create a child process using fork for space arg
+			pid_t pid = fork();
+
+			if (pid < 0) {
+				perror("Error :: Failed forking child.\n");
+				return ERROR;
+			}
+			else if (pid == 0) {
+				if (FORK_SLEEP) {
+					printf("Sleep of %ds in child process\n", SLEEP);
+					sleep(SLEEP);
+				}
+				int file_disc;
+
+				if (strcmp(oflag, "r") == 0) {
+
+					file_disc = open(cmd_tokens_array[1], O_RDONLY);
+					if (file_disc < 0) {
+						perror("Error :: Failed reading file.\n");
+						fprintf(stderr, "File : %s\n",cmd_tokens_array[1]);
+						return ERROR;
+					}
+					else{
+						dup2(file_disc, STDIN_FILENO);
+						close(file_disc);
+					}
+					return execute_shell_cmd_with_space(cmd_tokens_array[0], sub_cmd_delimit, READ_FLAG);
+				}
+				else if (strcmp(oflag, "w") == 0) {
+
+					fprintf(stderr, "File trying to create : %s\n",cmd_tokens_array[1]);
+					file_disc = creat(cmd_tokens_array[1], 0644);
+					if (file_disc < 0) {
+						perror("Error :: Failed creating file.\n");
+						fprintf(stderr, "File : %s\n",cmd_tokens_array[1]);
+						return ERROR;
+					}
+					else{
+						dup2(file_disc, STDOUT_FILENO);
+						close(file_disc);
+					}
+					return execute_shell_cmd_with_space(cmd_tokens_array[0], sub_cmd_delimit, WRITE_FLAG);
+				}
+			}
+			else {
+				wait(NULL);
+			}
 		}
 	}
 
@@ -567,6 +574,7 @@ int execute_shell_cmd_pipes_loop(char *cmd_line_buff, DELIMIT_Count cmd_delimit,
 		}
 		else if (pid == 0) {
 			if (FORK_SLEEP) {
+				printf("Sleep of %ds in child process\n", SLEEP);
 				sleep(SLEEP);
 			}
 			/* child gets input from the previous command, if it's not the first command */
@@ -652,6 +660,7 @@ int execute_shell_cmd_pipes_loop_new(char *cmd_line_buff, DELIMIT_Count cmd_deli
 		}
 		else if (pid == 0) {
 			if (FORK_SLEEP) {
+				printf("Sleep of %ds in child process\n", SLEEP);
 				sleep(SLEEP);
 			}
 			/* child gets input from the previous command, if it's not the first command */
@@ -732,6 +741,7 @@ int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int 
 		}
 		else if (pid == 0) {
 			if (FORK_SLEEP) {
+				printf("Sleep of %ds in child process\n", SLEEP);
 				sleep(SLEEP);
 			}
 			dup2(pipe_fd[0][1], STDOUT_FILENO);
@@ -757,10 +767,10 @@ int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int 
 				return execute_shell_cmd_with_space(cmd_tokens_array[1], right_cmd_delimit, READ_FLAG);
 			}
 			else {
+				close(pipe_fd[0][0]);
+				close(pipe_fd[0][1]);
 				wait(NULL);
 			}
-			close(pipe_fd[0][0]);
-			close(pipe_fd[0][1]);
 		}
 	}
 	else{
@@ -790,8 +800,8 @@ int process_shell_cmd(char *shell_name) {
 
 		if (cmd_delimit.pipe_count > 0) {
 			// pipes plus spaces
-			// func_ret = execute_shell_cmd_pipes(cmd_line_buff, cmd_delimit, NO_FLAG);
-			func_ret = execute_shell_cmd_pipes_loop_new(cmd_line_buff, cmd_delimit, NO_FLAG);
+			func_ret = execute_shell_cmd_pipes(cmd_line_buff, cmd_delimit, NO_FLAG);
+			// func_ret = execute_shell_cmd_pipes_loop_new(cmd_line_buff, cmd_delimit, NO_FLAG);
 			if (func_ret==ERROR) {
 				return ERROR;
 			}
