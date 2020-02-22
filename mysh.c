@@ -23,6 +23,7 @@
 // dont run execv in parent or else it will terminate
 // we need pipe sharing in funct calls
 // we need fork inside fork
+// cat input.txt | grep text | wc -w
 
 void print_shell_name(char *shell_name) {
 	printf("\n%s>", shell_name);
@@ -533,93 +534,8 @@ int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit
 	return CONTINUE;
 }
 
+
 int execute_shell_cmd_pipes_loop(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG) {
-
-	char pipe_delimit[] = "|";
-	int array_size = cmd_delimit.pipe_count+1;
-	int pipe_fd[2][cmd_delimit.pipe_count];
-
-	if (DEBUG_PRINT) {
-		printf("Pipe Delimit is : <%s>\n", pipe_delimit);
-	}
-
-	char cmd_tokens_array[array_size][CMD_LEN];
-	split_shell_cmd_by_delimit(cmd_line_buff, cmd_tokens_array, cmd_delimit, pipe_delimit);
-
-	/* parent creates all needed pipes at the start */
-	for(int i=0; i<cmd_delimit.pipe_count; i++) {
-		if(pipe(pipe_fd[i])<0) {
-			perror("Error :: Pipe Failed.\n");
-			return ERROR;
-		}
-	}
-
-	for (int cmd_idx=0; cmd_idx<array_size; cmd_idx++) {
-
-		DELIMIT_Count sub_cmd_delimit;
-		clear_all_delimiters_count(&sub_cmd_delimit);
-		count_all_delimiters(cmd_tokens_array[cmd_idx], &sub_cmd_delimit);
-
-		if (DEBUG_PRINT) {
-			for(int i=0; i<cmd_delimit.pipe_count; i++) {
-			  printf("Pipes before fork %d : R-%d, W-%d\n", i, pipe_fd[i][0], pipe_fd[i][1]);
-			}
-		}
-		// create a child process using fork for space arg
-		pid_t pid = fork();
-
-		if (pid < 0) {
-			perror("Error :: Failed forking child.\n");
-			return ERROR;
-		}
-		else if (pid == 0) {
-			if (FORK_SLEEP) {
-				printf("Sleep of %ds in child process\n", SLEEP);
-				sleep(SLEEP);
-			}
-			/* child gets input from the previous command, if it's not the first command */
-			if(cmd_idx > 0) {
-				if(dup2(pipe_fd[cmd_idx][0], STDIN_FILENO) < 0) {
-					perror("Error :: DUP Failed.\n");
-					return ERROR;
-				}
-			}
-			/* child outputs to next command, if it's not the last command */
-			if(cmd_idx < cmd_delimit.pipe_count) {
-				if(dup2(pipe_fd[cmd_idx][1], STDOUT_FILENO) < 0) {
-					perror("Error :: DUP Failed.\n");
-					return ERROR;
-				}
-			}
-			close(pipe_fd[cmd_idx][0]);
-			close(pipe_fd[cmd_idx][1]);
-			// close all the pipes
-			if (DEBUG_PRINT) {
-				for(int i=0; i<cmd_delimit.pipe_count; i++) {
-				  printf("Pipes after fork %d : R-%d, W-%d\n", i, pipe_fd[i][0], pipe_fd[i][1]);
-				}
-			}
-			// execute
-			execute_shell_cmd_with_space(cmd_tokens_array[cmd_idx], sub_cmd_delimit, READ_FLAG);
-			// perror
-		}
-		else {
-			// wait till the last child exit or it will become a zombie process
-			wait(NULL);
-		}
-	}
-
-	/* parent closes all of its copies at the end */
-	for(int i=0; i<cmd_delimit.pipe_count; i++) {
-	  close(pipe_fd[i][0]);
-	  close(pipe_fd[i][1]);
-	}
-
-	return CONTINUE;
-}
-
-
-int execute_shell_cmd_pipes_loop_new(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG) {
 
 	char pipe_delimit[] = "|";
 	int array_size = cmd_delimit.pipe_count+1;
@@ -648,7 +564,7 @@ int execute_shell_cmd_pipes_loop_new(char *cmd_line_buff, DELIMIT_Count cmd_deli
 
 		if (DEBUG_PRINT) {
 			for(int i=0; i<cmd_delimit.pipe_count; i++) {
-			  printf("Pipes before fork %d : R-%d, W-%d\n", i, pipe_fd[i][0], pipe_fd[i][1]);
+			  printf("Pipes before fork %d : R-%d, W-%d\n", cmd_idx, pipe_fd[i][0], pipe_fd[i][1]);
 			}
 		}
 		// create a child process using fork for space arg
@@ -663,42 +579,53 @@ int execute_shell_cmd_pipes_loop_new(char *cmd_line_buff, DELIMIT_Count cmd_deli
 				printf("Sleep of %ds in child process\n", SLEEP);
 				sleep(SLEEP);
 			}
-			/* child gets input from the previous command, if it's not the first command */
-			if(cmd_idx > 0) {
-				if(dup2(pipe_fd[cmd_idx][0], STDIN_FILENO) < 0) {
-					perror("Error :: DUP Failed.\n");
+			/* child gets input from the previous command Pipe WR, if it's not the first command */
+			if(cmd_idx != 0) {
+				if (dup2(pipe_fd[cmd_idx-1][1], STDIN_FILENO) < 0) {
+					perror("Error :: Pipe Failed For STDIN.\n");
+					printf("Cannot Dup : %d Cmd STDIN to W-%d Cmd.\n", cmd_idx, cmd_idx-1);
 					return ERROR;
-				}
+        }
+				// dup2(pipe_fd[cmd_idx-1][1], STDIN_FILENO);
 			}
-			/* child outputs to next command, if it's not the last command */
-			if(cmd_idx < cmd_delimit.pipe_count) {
-				if(dup2(pipe_fd[cmd_idx][1], STDOUT_FILENO) < 0) {
-					perror("Error :: DUP Failed.\n");
+			/* child outputs to next command Pipe R, if it's not the last command */
+			if(cmd_idx != array_size-1) {
+				if (dup2(pipe_fd[cmd_idx+1][0], STDOUT_FILENO) < 0) {
+					perror("Error :: Pipe Failed For STDOUT.\n");
+					printf("Cannot Dup : %d Cmd STDOUT to R-%d Cmd.\n", cmd_idx, cmd_idx+1);
 					return ERROR;
-				}
+        }
+				// dup2(pipe_fd[cmd_idx+1][0], STDOUT_FILENO);
 			}
+			// close all the pipes
 			close(pipe_fd[cmd_idx][0]);
 			close(pipe_fd[cmd_idx][1]);
-			// close all the pipes
 			if (DEBUG_PRINT) {
 				for(int i=0; i<cmd_delimit.pipe_count; i++) {
-				  printf("Pipes after fork %d : R-%d, W-%d\n", i, pipe_fd[i][0], pipe_fd[i][1]);
+				  printf("Pipes after fork %d : R-%d, W-%d\n", cmd_idx, pipe_fd[i][0], pipe_fd[i][1]);
 				}
 			}
-			// execute
-			execute_shell_cmd_with_space(cmd_tokens_array[cmd_idx], sub_cmd_delimit, READ_FLAG);
-			// perror
+
+			return execute_shell_cmd_with_space(cmd_tokens_array[cmd_idx], sub_cmd_delimit, READ_FLAG);
 		}
 		else {
+			// if last command close all the pipes
+			if(cmd_idx == array_size-1) {
+				/* parent closes all of its copies at the end */
+				for(int i=0; i<cmd_delimit.pipe_count; i++) {
+				  close(pipe_fd[i][0]);
+				  close(pipe_fd[i][1]);
+				}
+				printf("For Loop Done >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+			}
+			// else  only close current pipe
+			else {
+				close(pipe_fd[cmd_idx][0]);
+				close(pipe_fd[cmd_idx][1]);
+			}
 			// wait till the last child exit or it will become a zombie process
 			wait(NULL);
 		}
-	}
-
-	/* parent closes all of its copies at the end */
-	for(int i=0; i<cmd_delimit.pipe_count; i++) {
-	  close(pipe_fd[i][0]);
-	  close(pipe_fd[i][1]);
 	}
 
 	return CONTINUE;
@@ -708,10 +635,8 @@ int execute_shell_cmd_pipes_loop_new(char *cmd_line_buff, DELIMIT_Count cmd_deli
 int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG) {
 
 	char pipe_delimit[] = "|";
-	// int func_ret;
 	int array_size = cmd_delimit.pipe_count+1;
-	// int pipe_fd[2*cmd_delimit.pipe_count];
-	int pipe_fd[2][cmd_delimit.pipe_count];
+	int pipe_fd[cmd_delimit.pipe_count][2];
 
 	if (DEBUG_PRINT) {
 		printf("Pipe Delimit is : <%s>\n", pipe_delimit);
@@ -750,7 +675,7 @@ int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int 
 			return execute_shell_cmd_with_space(cmd_tokens_array[0], left_cmd_delimit, WRITE_FLAG);
 		}
 		else {
-			wait(NULL);
+
 			pid_t pid = fork();
 
 			if (pid < 0) {
@@ -781,6 +706,36 @@ int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int 
 }
 
 
+// while( command ){
+//     pid = fork()
+//     if( pid == 0 ){
+//         /* child gets input from the previous command,
+//             if it's not the first command */
+//         if( not first command ){
+//             if( dup2(pipefds[(commandc-1)*2], 0) < ){
+//                 perror and exit
+//             }
+//         }
+//         /* child outputs to next command, if it's not
+//             the last command */
+//         if( not last command ){
+//             if( dup2(pipefds[commandc*2+1], 1) < 0 ){
+//                 perror and exit
+//             }
+//         }
+//         close all pipe-fds
+//         execvp
+//         perror and exit
+//     } else if( pid < 0 ){
+//         perror and exit
+//     }
+//     cmd = cmd->next
+//     commandc++
+// }
+//
+
+
+
 int process_shell_cmd(char *shell_name) {
 
 	char *cmd_line_buff = (char*)malloc(CMD_LINE_LEN * sizeof(char));
@@ -800,8 +755,8 @@ int process_shell_cmd(char *shell_name) {
 
 		if (cmd_delimit.pipe_count > 0) {
 			// pipes plus spaces
-			func_ret = execute_shell_cmd_pipes(cmd_line_buff, cmd_delimit, NO_FLAG);
-			// func_ret = execute_shell_cmd_pipes_loop_new(cmd_line_buff, cmd_delimit, NO_FLAG);
+			// func_ret = execute_shell_cmd_pipes(cmd_line_buff, cmd_delimit, NO_FLAG);
+			func_ret = execute_shell_cmd_pipes_loop(cmd_line_buff, cmd_delimit, NO_FLAG);
 			if (func_ret==ERROR) {
 				return ERROR;
 			}

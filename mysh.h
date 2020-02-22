@@ -15,7 +15,7 @@
 #define TRUE 1
 #define FALSE 0
 
-#define SLEEP 2
+#define SLEEP 5
 
 // #define DEBUG_PRINT TRUE
 #define DEBUG_PRINT FALSE
