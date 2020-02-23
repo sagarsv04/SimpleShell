@@ -638,15 +638,16 @@ int execute_one_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 		printf("Executing One Pipe : <%s> , <%s>\n", cmd_tokens_array[0], cmd_tokens_array[1]);
 	}
 
-	int pipe_fd[2];
+	int pipe_fd0[2];
+	DELIMIT_Count zero_cmd_delimit;
 	DELIMIT_Count one_cmd_delimit;
-	DELIMIT_Count two_cmd_delimit;
+	clear_all_delimiters_count(&zero_cmd_delimit);
 	clear_all_delimiters_count(&one_cmd_delimit);
-	clear_all_delimiters_count(&two_cmd_delimit);
-	count_all_delimiters(cmd_tokens_array[0], &one_cmd_delimit);
-	count_all_delimiters(cmd_tokens_array[1], &two_cmd_delimit);
+	count_all_delimiters(cmd_tokens_array[0], &zero_cmd_delimit);
+	count_all_delimiters(cmd_tokens_array[1], &one_cmd_delimit);
 
-	if (pipe(pipe_fd) < 0) {
+
+	if (pipe(pipe_fd0) < 0) {
 		perror("Error :: Pipe Failed.\n");
 		return ERROR;
 	}
@@ -661,9 +662,82 @@ int execute_one_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 			printf("Sleep of %ds in child process\n", SLEEP);
 			sleep(SLEEP);
 		}
-		dup2(pipe_fd[1], STDOUT_FILENO);
-		close(pipe_fd[0]);
-		close(pipe_fd[1]);
+		dup2(pipe_fd0[1], STDOUT_FILENO);
+		close(pipe_fd0[0]);
+		close(pipe_fd0[1]);
+		return execute_shell_cmd_with_space(cmd_tokens_array[0], zero_cmd_delimit, WRITE_FLAG);
+	}
+	else {
+		wait(NULL); // this is important
+
+		pid_t pid = fork();
+
+		if (pid < 0) {
+			perror("Error :: Failed forking child.\n");
+			return ERROR;
+		}
+		else if (pid == 0) {
+			if (FORK_SLEEP) {
+				sleep(SLEEP);
+			}
+			dup2(pipe_fd0[0], STDIN_FILENO);
+			close(pipe_fd0[1]);
+			close(pipe_fd0[0]);
+			return execute_shell_cmd_with_space(cmd_tokens_array[1], one_cmd_delimit, READ_FLAG);
+		}
+		else {
+			close(pipe_fd0[0]);
+			close(pipe_fd0[1]);
+			wait(NULL); // this is important
+		}
+	}
+
+	return CONTINUE;
+}
+
+
+int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
+
+	if (DEBUG_PRINT) {
+		printf("Executing Two Pipe : <%s> , <%s> , <%s>\n", cmd_tokens_array[0], cmd_tokens_array[1], cmd_tokens_array[2]);
+	}
+
+	int pipe_fd0[2];
+	int pipe_fd1[2];
+	DELIMIT_Count zero_cmd_delimit;
+	DELIMIT_Count one_cmd_delimit;
+	DELIMIT_Count two_cmd_delimit;
+	clear_all_delimiters_count(&zero_cmd_delimit);
+	clear_all_delimiters_count(&one_cmd_delimit);
+	clear_all_delimiters_count(&two_cmd_delimit);
+	count_all_delimiters(cmd_tokens_array[0], &zero_cmd_delimit);
+	count_all_delimiters(cmd_tokens_array[1], &one_cmd_delimit);
+	count_all_delimiters(cmd_tokens_array[2], &two_cmd_delimit);
+
+	if (pipe(pipe_fd0) < 0) {
+		perror("Error :: Pipe Failed.\n");
+		return ERROR;
+	}
+	if (pipe(pipe_fd1) < 0) {
+		perror("Error :: Pipe Failed.\n");
+		return ERROR;
+	}
+	pid_t pid = fork();
+
+	if (pid < 0) {
+		perror("Error :: Failed forking child.\n");
+		return ERROR;
+	}
+	else if (pid == 0) {
+		if (FORK_SLEEP) {
+			printf("Sleep of %ds in child process\n", SLEEP);
+			sleep(SLEEP);
+		}
+		dup2(pipe_fd0[1], STDOUT_FILENO);
+		close(pipe_fd0[1]);
+		close(pipe_fd0[0]);
+		close(pipe_fd1[1]);
+		close(pipe_fd1[0]);
 		return execute_shell_cmd_with_space(cmd_tokens_array[0], one_cmd_delimit, WRITE_FLAG);
 	}
 	else {
@@ -678,23 +752,43 @@ int execute_one_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 			if (FORK_SLEEP) {
 				sleep(SLEEP);
 			}
-			dup2(pipe_fd[0], STDIN_FILENO);
-			close(pipe_fd[1]);
-			close(pipe_fd[0]);
+			dup2(pipe_fd0[0], STDIN_FILENO);
+			dup2(pipe_fd1[1], STDOUT_FILENO);
+			close(pipe_fd0[1]);
+			close(pipe_fd0[0]);
+			close(pipe_fd1[1]);
+			close(pipe_fd1[0]);
 			return execute_shell_cmd_with_space(cmd_tokens_array[1], two_cmd_delimit, READ_FLAG);
 		}
 		else {
-			close(pipe_fd[0]);
-			close(pipe_fd[1]);
 			wait(NULL); // this is important
+			pid_t pid = fork();
+
+			if (pid < 0) {
+				perror("Error :: Failed forking child.\n");
+				return ERROR;
+			}
+			else if (pid == 0) {
+				if (FORK_SLEEP) {
+					sleep(SLEEP);
+				}
+				dup2(pipe_fd1[0], STDIN_FILENO);
+				close(pipe_fd0[1]);
+				close(pipe_fd0[0]);
+				close(pipe_fd1[1]);
+				close(pipe_fd1[0]);
+				// check if output re direction
+				return execute_shell_cmd_with_space(cmd_tokens_array[1], two_cmd_delimit, READ_FLAG);
+			}
+			else {
+				close(pipe_fd0[1]);
+				close(pipe_fd0[0]);
+				close(pipe_fd1[1]);
+				close(pipe_fd1[0]);
+				wait(NULL); // this is important
+			}
 		}
 	}
-
-	return CONTINUE;
-}
-
-int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
-
 
 	return CONTINUE;
 }

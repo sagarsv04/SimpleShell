@@ -17,8 +17,8 @@
 
 #define SLEEP 5
 
-#define DEBUG_PRINT TRUE
-// #define DEBUG_PRINT FALSE
+// #define DEBUG_PRINT TRUE
+#define DEBUG_PRINT FALSE
 
 // #define FORK_SLEEP TRUE  // child proccess sleeps befor executing
 #define FORK_SLEEP FALSE
