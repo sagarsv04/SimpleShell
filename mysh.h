@@ -10,15 +10,15 @@
 #ifndef _MYSH_H_
 #define _MYSH_H_
 
-
+// cat input.txt | grep text | wc -w
 
 #define TRUE 1
 #define FALSE 0
 
 #define SLEEP 5
 
-// #define DEBUG_PRINT TRUE
-#define DEBUG_PRINT FALSE
+#define DEBUG_PRINT TRUE
+// #define DEBUG_PRINT FALSE
 
 // #define FORK_SLEEP TRUE  // child proccess sleeps befor executing
 #define FORK_SLEEP FALSE
@@ -80,10 +80,13 @@ int execute_shell_cmd_with_space(char *cmd_line_buff, DELIMIT_Count cmd_delimit,
 // int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit);
 int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG);
 
-int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG);
+int execute_one_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG);
+int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG);
+int execute_three_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG);
+int execute_four_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG);
 
+int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG);
 int execute_shell_cmd_pipes_loop(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG);
-int execute_shell_cmd_pipes_loop_new(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG);
 
 int process_shell_cmd(char *shell_name);
 
