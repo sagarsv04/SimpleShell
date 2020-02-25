@@ -662,6 +662,7 @@ int execute_one_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 			printf("Sleep of %ds in child process\n", SLEEP);
 			sleep(SLEEP);
 		}
+		// close(STDOUT_FILENO);
 		// dup2(pipe_fd0[1], STDOUT_FILENO);
 		if (dup2(pipe_fd0[1], STDOUT_FILENO) < 0) {
 			perror("Error :: Dup Failed For STDOUT in Child 1.\n");
@@ -684,6 +685,7 @@ int execute_one_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 			if (FORK_SLEEP) {
 				sleep(SLEEP);
 			}
+			// close(STDIN_FILENO);
 			// dup2(pipe_fd0[0], STDIN_FILENO);
 			if (dup2(pipe_fd0[0], STDIN_FILENO) < 0) {
 				perror("Error :: Dup Failed For STDIN in Child 2.\n");
@@ -741,6 +743,7 @@ int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 			printf("Sleep of %ds in child process\n", SLEEP);
 			sleep(SLEEP);
 		}
+		// close(STDOUT_FILENO);
 		// dup2(pipe_fd0[1], STDOUT_FILENO);
 		if (dup2(pipe_fd0[1], STDOUT_FILENO) < 0) {
 			perror("Error :: Dup Failed For STDOUT in Child 1.\n");
@@ -764,11 +767,13 @@ int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 			if (FORK_SLEEP) {
 				sleep(SLEEP);
 			}
+			// close(STDIN_FILENO);
 			// dup2(pipe_fd0[0], STDIN_FILENO);
 			if (dup2(pipe_fd0[0], STDIN_FILENO) < 0) {
 				perror("Error :: Dup Failed For STDIN in Child 2.\n");
 				return ERROR;
 			}
+			// close(STDOUT_FILENO);
 			// dup2(pipe_fd1[1], STDOUT_FILENO);
 			if (dup2(pipe_fd1[1], STDOUT_FILENO) < 0) {
 				perror("Error :: Dup Failed For STDOUT in Child 2.\n");
@@ -792,6 +797,7 @@ int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 				if (FORK_SLEEP) {
 					sleep(SLEEP);
 				}
+				// close(STDIN_FILENO);
 				// dup2(pipe_fd1[0], STDIN_FILENO);
 				if (dup2(pipe_fd1[0], STDIN_FILENO) < 0) {
 					perror("Error :: Dup Failed For STDIN in Child 3.\n");
