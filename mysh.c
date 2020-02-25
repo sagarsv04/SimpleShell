@@ -714,6 +714,7 @@ int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 
 	int pipe_fd0[2];
 	int pipe_fd1[2];
+	// int ret_status;
 	DELIMIT_Count zero_cmd_delimit;
 	DELIMIT_Count one_cmd_delimit;
 	DELIMIT_Count two_cmd_delimit;
@@ -732,13 +733,13 @@ int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 		perror("Error :: Pipe Failed.\n");
 		return ERROR;
 	}
-	pid_t pid = fork();
+	pid_t child_0_pid = fork();
 
-	if (pid < 0) {
+	if (child_0_pid < 0) {
 		perror("Error :: Failed forking child.\n");
 		return ERROR;
 	}
-	else if (pid == 0) {
+	else if (child_0_pid == 0) {
 		if (FORK_SLEEP) {
 			printf("Sleep of %ds in child process\n", SLEEP);
 			sleep(SLEEP);
@@ -753,17 +754,24 @@ int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 		close(pipe_fd0[0]);
 		close(pipe_fd1[1]);
 		close(pipe_fd1[0]);
-		return execute_shell_cmd_with_space(cmd_tokens_array[0], one_cmd_delimit, WRITE_FLAG);
+		return execute_shell_cmd_with_space(cmd_tokens_array[0], zero_cmd_delimit, WRITE_FLAG);
 	}
 	else {
-		wait(NULL); // this is important
-		pid_t pid = fork();
 
-		if (pid < 0) {
+		// waitpid(child_0_pid, &ret_status, 0);
+		// // Verify child process terminated without error.
+		// if (ret_status != 0) {
+		// 	fprintf(stderr, "Error :: Command : <%s> Failed.\n", cmd_tokens_array[0]);
+		// 	return ERROR;
+		// }
+		wait(NULL); // this is important
+		pid_t child_1_pid = fork();
+
+		if (child_1_pid < 0) {
 			perror("Error :: Failed forking child.\n");
 			return ERROR;
 		}
-		else if (pid == 0) {
+		else if (child_1_pid == 0) {
 			if (FORK_SLEEP) {
 				sleep(SLEEP);
 			}
@@ -783,17 +791,23 @@ int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 			close(pipe_fd0[0]);
 			close(pipe_fd1[1]);
 			close(pipe_fd1[0]);
-			return execute_shell_cmd_with_space(cmd_tokens_array[1], two_cmd_delimit, READ_FLAG);
+			return execute_shell_cmd_with_space(cmd_tokens_array[1], one_cmd_delimit, READ_FLAG);
 		}
 		else {
-			wait(NULL); // this is important
-			pid_t pid = fork();
+			// waitpid(child_1_pid, &ret_status, 0);
+			// // Verify child process terminated without error.
+			// if (ret_status != 0) {
+			// 	fprintf(stderr, "Error :: Command : <%s> Failed.\n", cmd_tokens_array[1]);
+			// 	return ERROR;
+			// }
+			// wait(NULL); // this is important
+			pid_t child_2_pid = fork();
 
-			if (pid < 0) {
+			if (child_2_pid < 0) {
 				perror("Error :: Failed forking child.\n");
 				return ERROR;
 			}
-			else if (pid == 0) {
+			else if (child_2_pid == 0) {
 				if (FORK_SLEEP) {
 					sleep(SLEEP);
 				}
@@ -808,13 +822,20 @@ int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 				close(pipe_fd1[1]);
 				close(pipe_fd1[0]);
 				// check if output re direction
-				return execute_shell_cmd_with_space(cmd_tokens_array[1], two_cmd_delimit, READ_FLAG);
+				return execute_shell_cmd_with_space(cmd_tokens_array[2], two_cmd_delimit, READ_FLAG);
 			}
 			else {
 				close(pipe_fd0[1]);
 				close(pipe_fd0[0]);
 				close(pipe_fd1[1]);
 				close(pipe_fd1[0]);
+
+				// waitpid(child_2_pid, &ret_status, 0);
+				// // Verify child process terminated without error.
+				// if (ret_status != 0) {
+				// 	fprintf(stderr, "Error :: Command : <%s> Failed.\n", cmd_tokens_array[2]);
+				// 	return ERROR;
+				// }
 				wait(NULL); // this is important
 			}
 		}
