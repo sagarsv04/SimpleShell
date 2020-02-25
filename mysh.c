@@ -757,14 +757,13 @@ int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 		return execute_shell_cmd_with_space(cmd_tokens_array[0], zero_cmd_delimit, WRITE_FLAG);
 	}
 	else {
-
+		// Verify child process terminated without error.
 		// waitpid(child_0_pid, &ret_status, 0);
-		// // Verify child process terminated without error.
 		// if (ret_status != 0) {
 		// 	fprintf(stderr, "Error :: Command : <%s> Failed.\n", cmd_tokens_array[0]);
 		// 	return ERROR;
 		// }
-		wait(NULL); // this is important
+		// wait(NULL); // this is important
 		pid_t child_1_pid = fork();
 
 		if (child_1_pid < 0) {
@@ -794,8 +793,8 @@ int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 			return execute_shell_cmd_with_space(cmd_tokens_array[1], one_cmd_delimit, READ_FLAG);
 		}
 		else {
+			// Verify child process terminated without error.
 			// waitpid(child_1_pid, &ret_status, 0);
-			// // Verify child process terminated without error.
 			// if (ret_status != 0) {
 			// 	fprintf(stderr, "Error :: Command : <%s> Failed.\n", cmd_tokens_array[1]);
 			// 	return ERROR;
@@ -830,12 +829,14 @@ int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 				close(pipe_fd1[1]);
 				close(pipe_fd1[0]);
 
+				// Verify child process terminated without error.
 				// waitpid(child_2_pid, &ret_status, 0);
-				// // Verify child process terminated without error.
 				// if (ret_status != 0) {
 				// 	fprintf(stderr, "Error :: Command : <%s> Failed.\n", cmd_tokens_array[2]);
 				// 	return ERROR;
 				// }
+				wait(NULL); // this is important
+				wait(NULL); // this is important
 				wait(NULL); // this is important
 			}
 		}
@@ -971,8 +972,7 @@ int main(int argc, char const *argv[]) {
 		print_shell_name(shell_name);
 		process_ret = process_shell_cmd(shell_name);
 		if (process_ret == ERROR) {
-			fprintf(stderr, "Error :: Sorry I Failed You :(\n");
-			exit(ERROR);
+			fprintf(stderr, "Error :: Sorry Try Again!\n");
 		}
 		else {
 			continue;
