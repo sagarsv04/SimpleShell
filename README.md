@@ -33,9 +33,10 @@ How to compile and run
 Commands Supported
 ============
 
-- Internal commands: cd, pwd, echo, exit or Ctrl+C, help etc
-- Clear Screen     : clear, reset
-- Input Redirection : grep text < input.txt
-- Output Redirection : grep text input.txt > output.txt
-- Pipe Processes : cat input.txt | grep text | wc -w
+- Internal commands			: cd, pwd, echo, exit or Ctrl+C, help etc
+- Clear Screen     			: clear, reset
+- Input Redirection 		: grep text < input.txt
+- Output Redirection 		: grep text input.txt > output.txt
+- Pipe Processes 				: cat input.txt | grep text | wc -w
+- Pipe + Redirection		: ls -la | grep text > output.txt -OR- grep text < input.txt | wc -w
 - Variable Substitution : echo $USER (substitution of max CMD_LEN characters)
