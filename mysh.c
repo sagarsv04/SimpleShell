@@ -482,16 +482,37 @@ int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit
 			fprintf(stderr, "Error :: Invalid command : <%s>.\n", cmd_line_buff);
 		}
 		else {
-
 			DELIMIT_Count sub_cmd_delimit;
 			clear_all_delimiters_count(&sub_cmd_delimit);
 			count_all_delimiters(cmd_tokens_array[0], &sub_cmd_delimit);
+			int file_disc;
 
 			if (pipe_FLAG==READ_FLAG) {
-				/* code */
+				file_disc = open(cmd_tokens_array[1], O_RDONLY);
+				if (file_disc < 0) {
+					perror("Error :: Failed reading file.\n");
+					fprintf(stderr, "File : %s\n",cmd_tokens_array[1]);
+					return ERROR;
+				}
+				else{
+					dup2(file_disc, STDIN_FILENO);
+					close(file_disc);
+				}
+				return execute_shell_cmd_with_space(cmd_tokens_array[0], sub_cmd_delimit, READ_FLAG);
 			}
 			else if (pipe_FLAG==WRITE_FLAG) {
-				/* code */
+				fprintf(stderr, "File trying to create : %s\n",cmd_tokens_array[1]);
+				file_disc = creat(cmd_tokens_array[1], 0644);
+				if (file_disc < 0) {
+					perror("Error :: Failed creating file.\n");
+					fprintf(stderr, "File : %s\n",cmd_tokens_array[1]);
+					return ERROR;
+				}
+				else{
+					dup2(file_disc, STDOUT_FILENO);
+					close(file_disc);
+				}
+				return execute_shell_cmd_with_space(cmd_tokens_array[0], sub_cmd_delimit, WRITE_FLAG);
 			}
 			else {
 				// create a child process using fork for space arg
@@ -506,10 +527,7 @@ int execute_shell_cmd_redirection(char *cmd_line_buff, DELIMIT_Count cmd_delimit
 						printf("Sleep of %ds in child process\n", SLEEP);
 						sleep(SLEEP);
 					}
-					int file_disc;
-
 					if (strcmp(oflag, "r") == 0) {
-
 						file_disc = open(cmd_tokens_array[1], O_RDONLY);
 						if (file_disc < 0) {
 							perror("Error :: Failed reading file.\n");
@@ -668,7 +686,12 @@ int execute_one_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 		}
 		close(pipe_fd0[0]);
 		close(pipe_fd0[1]);
-		return execute_shell_cmd_with_space(cmd_tokens_array[0], zero_cmd_delimit, WRITE_FLAG);
+		if (zero_cmd_delimit.in_re_count > 0) {
+			return execute_shell_cmd_redirection(cmd_tokens_array[0], zero_cmd_delimit, READ_FLAG);
+		}
+		else {
+			return execute_shell_cmd_with_space(cmd_tokens_array[0], zero_cmd_delimit, WRITE_FLAG);
+		}
 	}
 	else {
 		pid_t pid = fork();
@@ -686,7 +709,12 @@ int execute_one_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 			}
 			close(pipe_fd0[1]);
 			close(pipe_fd0[0]);
-			return execute_shell_cmd_with_space(cmd_tokens_array[1], one_cmd_delimit, READ_FLAG);
+			if (one_cmd_delimit.out_re_count > 0) {
+				return execute_shell_cmd_redirection(cmd_tokens_array[1], one_cmd_delimit, WRITE_FLAG);
+			}
+			else {
+				return execute_shell_cmd_with_space(cmd_tokens_array[1], one_cmd_delimit, READ_FLAG);
+			}
 		}
 		else {
 			close(pipe_fd0[0]);
@@ -746,7 +774,12 @@ int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 		close(pipe_fd0[0]);
 		close(pipe_fd1[1]);
 		close(pipe_fd1[0]);
-		return execute_shell_cmd_with_space(cmd_tokens_array[0], zero_cmd_delimit, WRITE_FLAG);
+		if (zero_cmd_delimit.in_re_count > 0) {
+			return execute_shell_cmd_redirection(cmd_tokens_array[0], zero_cmd_delimit, READ_FLAG);
+		}
+		else {
+			return execute_shell_cmd_with_space(cmd_tokens_array[0], zero_cmd_delimit, WRITE_FLAG);
+		}
 	}
 	else {
 		pid_t child_1_pid = fork();
@@ -793,7 +826,12 @@ int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 				close(pipe_fd1[1]);
 				close(pipe_fd1[0]);
 				// check if output re direction
-				return execute_shell_cmd_with_space(cmd_tokens_array[2], two_cmd_delimit, READ_FLAG);
+				if (two_cmd_delimit.out_re_count > 0) {
+					return execute_shell_cmd_redirection(cmd_tokens_array[2], two_cmd_delimit, WRITE_FLAG);
+				}
+				else {
+					return execute_shell_cmd_with_space(cmd_tokens_array[2], two_cmd_delimit, READ_FLAG);
+				}
 			}
 			else {
 				close(pipe_fd0[1]);
@@ -866,7 +904,12 @@ int execute_three_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 		close(pipe_fd1[0]);
 		close(pipe_fd2[1]);
 		close(pipe_fd2[0]);
-		return execute_shell_cmd_with_space(cmd_tokens_array[0], zero_cmd_delimit, WRITE_FLAG);
+		if (zero_cmd_delimit.in_re_count > 0) {
+			return execute_shell_cmd_redirection(cmd_tokens_array[0], zero_cmd_delimit, READ_FLAG);
+		}
+		else {
+			return execute_shell_cmd_with_space(cmd_tokens_array[0], zero_cmd_delimit, WRITE_FLAG);
+		}
 	}
 	else {
 		pid_t child_1_pid = fork();
@@ -946,7 +989,12 @@ int execute_three_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 					close(pipe_fd2[1]);
 					close(pipe_fd2[0]);
 					// check if output re direction
-					return execute_shell_cmd_with_space(cmd_tokens_array[3], three_cmd_delimit, READ_FLAG);
+					if (three_cmd_delimit.out_re_count > 0) {
+						return execute_shell_cmd_redirection(cmd_tokens_array[3], three_cmd_delimit, WRITE_FLAG);
+					}
+					else {
+						return execute_shell_cmd_with_space(cmd_tokens_array[3], three_cmd_delimit, READ_FLAG);
+					}
 				}
 				else {
 					close(pipe_fd0[1]);
