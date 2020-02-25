@@ -662,8 +662,6 @@ int execute_one_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 			printf("Sleep of %ds in child process\n", SLEEP);
 			sleep(SLEEP);
 		}
-		// close(STDOUT_FILENO);
-		// dup2(pipe_fd0[1], STDOUT_FILENO);
 		if (dup2(pipe_fd0[1], STDOUT_FILENO) < 0) {
 			perror("Error :: Dup Failed For STDOUT in Child 1.\n");
 			return ERROR;
@@ -673,10 +671,7 @@ int execute_one_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 		return execute_shell_cmd_with_space(cmd_tokens_array[0], zero_cmd_delimit, WRITE_FLAG);
 	}
 	else {
-		wait(NULL); // this is important
-
 		pid_t pid = fork();
-
 		if (pid < 0) {
 			perror("Error :: Failed forking child.\n");
 			return ERROR;
@@ -685,8 +680,6 @@ int execute_one_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 			if (FORK_SLEEP) {
 				sleep(SLEEP);
 			}
-			// close(STDIN_FILENO);
-			// dup2(pipe_fd0[0], STDIN_FILENO);
 			if (dup2(pipe_fd0[0], STDIN_FILENO) < 0) {
 				perror("Error :: Dup Failed For STDIN in Child 2.\n");
 				return ERROR;
@@ -698,6 +691,8 @@ int execute_one_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 		else {
 			close(pipe_fd0[0]);
 			close(pipe_fd0[1]);
+
+			wait(NULL); // this is important
 			wait(NULL); // this is important
 		}
 	}
@@ -714,7 +709,6 @@ int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 
 	int pipe_fd0[2];
 	int pipe_fd1[2];
-	// int ret_status;
 	DELIMIT_Count zero_cmd_delimit;
 	DELIMIT_Count one_cmd_delimit;
 	DELIMIT_Count two_cmd_delimit;
@@ -744,8 +738,6 @@ int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 			printf("Sleep of %ds in child process\n", SLEEP);
 			sleep(SLEEP);
 		}
-		// close(STDOUT_FILENO);
-		// dup2(pipe_fd0[1], STDOUT_FILENO);
 		if (dup2(pipe_fd0[1], STDOUT_FILENO) < 0) {
 			perror("Error :: Dup Failed For STDOUT in Child 1.\n");
 			return ERROR;
@@ -757,13 +749,6 @@ int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 		return execute_shell_cmd_with_space(cmd_tokens_array[0], zero_cmd_delimit, WRITE_FLAG);
 	}
 	else {
-		// Verify child process terminated without error.
-		// waitpid(child_0_pid, &ret_status, 0);
-		// if (ret_status != 0) {
-		// 	fprintf(stderr, "Error :: Command : <%s> Failed.\n", cmd_tokens_array[0]);
-		// 	return ERROR;
-		// }
-		// wait(NULL); // this is important
 		pid_t child_1_pid = fork();
 
 		if (child_1_pid < 0) {
@@ -774,14 +759,10 @@ int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 			if (FORK_SLEEP) {
 				sleep(SLEEP);
 			}
-			// close(STDIN_FILENO);
-			// dup2(pipe_fd0[0], STDIN_FILENO);
 			if (dup2(pipe_fd0[0], STDIN_FILENO) < 0) {
 				perror("Error :: Dup Failed For STDIN in Child 2.\n");
 				return ERROR;
 			}
-			// close(STDOUT_FILENO);
-			// dup2(pipe_fd1[1], STDOUT_FILENO);
 			if (dup2(pipe_fd1[1], STDOUT_FILENO) < 0) {
 				perror("Error :: Dup Failed For STDOUT in Child 2.\n");
 				return ERROR;
@@ -793,13 +774,6 @@ int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 			return execute_shell_cmd_with_space(cmd_tokens_array[1], one_cmd_delimit, READ_FLAG);
 		}
 		else {
-			// Verify child process terminated without error.
-			// waitpid(child_1_pid, &ret_status, 0);
-			// if (ret_status != 0) {
-			// 	fprintf(stderr, "Error :: Command : <%s> Failed.\n", cmd_tokens_array[1]);
-			// 	return ERROR;
-			// }
-			// wait(NULL); // this is important
 			pid_t child_2_pid = fork();
 
 			if (child_2_pid < 0) {
@@ -810,8 +784,6 @@ int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 				if (FORK_SLEEP) {
 					sleep(SLEEP);
 				}
-				// close(STDIN_FILENO);
-				// dup2(pipe_fd1[0], STDIN_FILENO);
 				if (dup2(pipe_fd1[0], STDIN_FILENO) < 0) {
 					perror("Error :: Dup Failed For STDIN in Child 3.\n");
 					return ERROR;
@@ -828,13 +800,6 @@ int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 				close(pipe_fd0[0]);
 				close(pipe_fd1[1]);
 				close(pipe_fd1[0]);
-
-				// Verify child process terminated without error.
-				// waitpid(child_2_pid, &ret_status, 0);
-				// if (ret_status != 0) {
-				// 	fprintf(stderr, "Error :: Command : <%s> Failed.\n", cmd_tokens_array[2]);
-				// 	return ERROR;
-				// }
 				wait(NULL); // this is important
 				wait(NULL); // this is important
 				wait(NULL); // this is important
@@ -845,18 +810,162 @@ int execute_two_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 	return CONTINUE;
 }
 
+
 int execute_three_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
 
+	if (DEBUG_PRINT) {
+		printf("Executing Three Pipe : <%s> , <%s> , <%s> , <%s>\n", cmd_tokens_array[0], cmd_tokens_array[1], cmd_tokens_array[2], cmd_tokens_array[3]);
+	}
+
+	int pipe_fd0[2];
+	int pipe_fd1[2];
+	int pipe_fd2[2];
+	DELIMIT_Count zero_cmd_delimit;
+	DELIMIT_Count one_cmd_delimit;
+	DELIMIT_Count two_cmd_delimit;
+	DELIMIT_Count three_cmd_delimit;
+	clear_all_delimiters_count(&zero_cmd_delimit);
+	clear_all_delimiters_count(&one_cmd_delimit);
+	clear_all_delimiters_count(&two_cmd_delimit);
+	clear_all_delimiters_count(&three_cmd_delimit);
+	count_all_delimiters(cmd_tokens_array[0], &zero_cmd_delimit);
+	count_all_delimiters(cmd_tokens_array[1], &one_cmd_delimit);
+	count_all_delimiters(cmd_tokens_array[2], &two_cmd_delimit);
+	count_all_delimiters(cmd_tokens_array[3], &three_cmd_delimit);
+
+	if (pipe(pipe_fd0) < 0) {
+		perror("Error :: Pipe Failed.\n");
+		return ERROR;
+	}
+	if (pipe(pipe_fd1) < 0) {
+		perror("Error :: Pipe Failed.\n");
+		return ERROR;
+	}
+	if (pipe(pipe_fd2) < 0) {
+		perror("Error :: Pipe Failed.\n");
+		return ERROR;
+	}
+	pid_t child_0_pid = fork();
+
+	if (child_0_pid < 0) {
+		perror("Error :: Failed forking child.\n");
+		return ERROR;
+	}
+	else if (child_0_pid == 0) {
+		if (FORK_SLEEP) {
+			printf("Sleep of %ds in child process\n", SLEEP);
+			sleep(SLEEP);
+		}
+		if (dup2(pipe_fd0[1], STDOUT_FILENO) < 0) {
+			perror("Error :: Dup Failed For STDOUT in Child 1.\n");
+			return ERROR;
+		}
+		close(pipe_fd0[1]);
+		close(pipe_fd0[0]);
+		close(pipe_fd1[1]);
+		close(pipe_fd1[0]);
+		close(pipe_fd2[1]);
+		close(pipe_fd2[0]);
+		return execute_shell_cmd_with_space(cmd_tokens_array[0], zero_cmd_delimit, WRITE_FLAG);
+	}
+	else {
+		pid_t child_1_pid = fork();
+
+		if (child_1_pid < 0) {
+			perror("Error :: Failed forking child.\n");
+			return ERROR;
+		}
+		else if (child_1_pid == 0) {
+			if (FORK_SLEEP) {
+				sleep(SLEEP);
+			}
+			if (dup2(pipe_fd0[0], STDIN_FILENO) < 0) {
+				perror("Error :: Dup Failed For STDIN in Child 2.\n");
+				return ERROR;
+			}
+			if (dup2(pipe_fd1[1], STDOUT_FILENO) < 0) {
+				perror("Error :: Dup Failed For STDOUT in Child 2.\n");
+				return ERROR;
+			}
+			close(pipe_fd0[1]);
+			close(pipe_fd0[0]);
+			close(pipe_fd1[1]);
+			close(pipe_fd1[0]);
+			close(pipe_fd2[1]);
+			close(pipe_fd2[0]);
+			return execute_shell_cmd_with_space(cmd_tokens_array[1], one_cmd_delimit, READ_FLAG);
+		}
+		else {
+			pid_t child_2_pid = fork();
+
+			if (child_2_pid < 0) {
+				perror("Error :: Failed forking child.\n");
+				return ERROR;
+			}
+			else if (child_2_pid == 0) {
+				if (FORK_SLEEP) {
+					sleep(SLEEP);
+				}
+
+				if (dup2(pipe_fd1[0], STDIN_FILENO) < 0) {
+					perror("Error :: Dup Failed For STDIN in Child 3.\n");
+					return ERROR;
+				}
+				if (dup2(pipe_fd2[1], STDOUT_FILENO) < 0) {
+					perror("Error :: Dup Failed For STDOUT in Child 2.\n");
+					return ERROR;
+				}
+				close(pipe_fd0[1]);
+				close(pipe_fd0[0]);
+				close(pipe_fd1[1]);
+				close(pipe_fd1[0]);
+				close(pipe_fd2[1]);
+				close(pipe_fd2[0]);
+				// check if output re direction
+				return execute_shell_cmd_with_space(cmd_tokens_array[2], two_cmd_delimit, READ_FLAG);
+			}
+			else {
+				pid_t child_3_pid = fork();
+
+				if (child_3_pid < 0) {
+					perror("Error :: Failed forking child.\n");
+					return ERROR;
+				}
+				else if (child_3_pid == 0) {
+					if (FORK_SLEEP) {
+						sleep(SLEEP);
+					}
+					if (dup2(pipe_fd2[0], STDIN_FILENO) < 0) {
+						perror("Error :: Dup Failed For STDIN in Child 3.\n");
+						return ERROR;
+					}
+					close(pipe_fd0[1]);
+					close(pipe_fd0[0]);
+					close(pipe_fd1[1]);
+					close(pipe_fd1[0]);
+					close(pipe_fd2[1]);
+					close(pipe_fd2[0]);
+					// check if output re direction
+					return execute_shell_cmd_with_space(cmd_tokens_array[3], three_cmd_delimit, READ_FLAG);
+				}
+				else {
+					close(pipe_fd0[1]);
+					close(pipe_fd0[0]);
+					close(pipe_fd1[1]);
+					close(pipe_fd1[0]);
+					close(pipe_fd2[1]);
+					close(pipe_fd2[0]);
+					wait(NULL); // this is important
+					wait(NULL); // this is important
+					wait(NULL); // this is important
+					wait(NULL); // this is important
+				}
+			}
+		}
+	}
 
 	return CONTINUE;
 }
-
-int execute_four_pipe(char cmd_tokens_array[][CMD_LEN], int pipe_FLAG) {
-
-
-	return CONTINUE;
-}
-
 
 
 int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int pipe_FLAG) {
@@ -875,8 +984,8 @@ int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int 
 	}
 	else {
 
-		if (token_idx > 5) {
-			fprintf(stderr, "Error :: Sorry Support upto four pipe delimited command.\n");
+		if (token_idx > 4) {
+			fprintf(stderr, "Error :: Sorry Support upto three pipe delimited command.\n");
 			return CONTINUE;
 		}
 		else {
@@ -889,9 +998,6 @@ int execute_shell_cmd_pipes(char *cmd_line_buff, DELIMIT_Count cmd_delimit, int 
 			}
 			else if (token_idx==4) {
 				return execute_three_pipe(cmd_tokens_array, pipe_FLAG);
-			}
-			else if (token_idx==5) {
-				return execute_four_pipe(cmd_tokens_array, pipe_FLAG);
 			}
 		}
 	}
