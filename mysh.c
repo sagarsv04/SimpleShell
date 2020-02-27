@@ -33,8 +33,15 @@ void clear_shell() {
 void print_help(char *shell_name) {
 	printf("Help Info ....\n");
 	printf("%s is a simple shell program with support for commands like.\n", shell_name);
-	printf("Internal commands: cd, pwd, echo, exit or Ctrl+C, help\n");
-	printf("Clear Screen     : clear, reset\n");
+	printf("Clear Screen                : clear, reset\n");
+	printf("Internal commands           : cd, pwd, echo, exit or Ctrl+C, help, etc\n");
+	printf("Input Redirection           : grep text < input.txt\n");
+	printf("Output Redirection          : grep text input.txt > output.txt\n");
+	printf("Pipe Processes              : cat input.txt | grep text | wc -w\n");
+	printf("Pipe + Input Redirection    : grep text < input.txt | wc -w\n");
+	printf("Pipe + Output Redirection   : ls -la | grep text > output.txt\n");
+	printf("Multiple Pipes              : ls -la | grep text | .. | .. | .. | .. | grep text\n");
+	printf("Variable Substitution       : echo $USER (substitution of max CMD_LEN characters)\n");
 }
 
 
@@ -123,6 +130,7 @@ int read_shell_cmd(char *cmd_line_buff, char *shell_name) {
 		}
 		else if (strcmp(cmd_line_buff, "help\n") == 0) {
 			print_help(shell_name);
+			return SUCCESS;
 		}
 		else {
 			// remove \n
@@ -634,16 +642,34 @@ int execute_shell_cmd_pipes_loop(char *cmd_line_buff, DELIMIT_Count cmd_delimit,
 				}
 			}
 
-			return execute_shell_cmd_with_space(cmd_tokens_array[cmd_idx], sub_cmd_delimit, READ_FLAG);
+			/* child closes all of its copies of pipe */
+			for(int i=0; i<(cmd_delimit.pipe_count*2); i++) {
+				close(pipe_fd[i]);
+			}
+
+			if ((sub_cmd_delimit.in_re_count > 0)&&(cmd_idx==0)) {
+				return execute_shell_cmd_redirection(cmd_tokens_array[cmd_idx], sub_cmd_delimit, READ_FLAG);
+			}
+			else if ((sub_cmd_delimit.out_re_count > 0)&&(cmd_idx==array_size-1)) {
+				return execute_shell_cmd_redirection(cmd_tokens_array[cmd_idx], sub_cmd_delimit, WRITE_FLAG);
+			}
+			else {
+				return execute_shell_cmd_with_space(cmd_tokens_array[cmd_idx], sub_cmd_delimit, READ_FLAG);
+			}
 		}
 		else {
-			wait(NULL);
+			; // wait(NULL); // no need to wait here
 		}
 	}
 
 	/* parent closes all of its copies at the end */
 	for(int i=0; i<(cmd_delimit.pipe_count*2); i++) {
 		close(pipe_fd[i]);
+	}
+
+	/* parent waits for num of pipes + 1 at the end */
+	for(int i=0; i<=cmd_delimit.pipe_count; i++) {
+		wait(NULL); // this is important
 	}
 
 	return CONTINUE;
@@ -1064,6 +1090,9 @@ int process_shell_cmd(char *shell_name) {
 		free(cmd_line_buff);
 		exit_handler(EXIT);
 	}
+	else if (func_ret==SUCCESS) {
+		return CONTINUE;
+	}
 	else {
 		// DELIMIT_Count *cmd_delimit = (DELIMIT_Count*)malloc(1 * sizeof(DELIMIT_Count));
 		DELIMIT_Count cmd_delimit;
@@ -1073,8 +1102,8 @@ int process_shell_cmd(char *shell_name) {
 
 		if (cmd_delimit.pipe_count > 0) {
 			// pipes plus spaces
-			func_ret = execute_shell_cmd_pipes(cmd_line_buff, cmd_delimit, NO_FLAG);
-			// func_ret = execute_shell_cmd_pipes_loop(cmd_line_buff, cmd_delimit, NO_FLAG);
+			// func_ret = execute_shell_cmd_pipes(cmd_line_buff, cmd_delimit, NO_FLAG);
+			func_ret = execute_shell_cmd_pipes_loop(cmd_line_buff, cmd_delimit, NO_FLAG);
 			if (func_ret==ERROR) {
 				return ERROR;
 			}

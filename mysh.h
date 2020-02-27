@@ -10,12 +10,12 @@
 #ifndef _MYSH_H_
 #define _MYSH_H_
 
-// cat input.txt | grep text | wc -w
+// cat input.txt | grep text | grep text | grep text | grep text | grep text | wc -w > out.txt
 
 #define TRUE 1
 #define FALSE 0
 
-#define SLEEP 5
+#define SLEEP 2
 
 // #define DEBUG_PRINT TRUE
 #define DEBUG_PRINT FALSE
@@ -32,28 +32,28 @@
 
 
 enum {
-  NO_FLAG,
-  READ_FLAG,
-  WRITE_FLAG
+	NO_FLAG,
+	READ_FLAG,
+	WRITE_FLAG
 };
 
 
 enum {
-  EXIT,
-  CONTINUE,
-  SUCCESS,
-  FAILURE,
-  ERROR
+	EXIT,
+	CONTINUE,
+	SUCCESS,
+	FAILURE,
+	ERROR
 };
 
 
 typedef struct DELIMIT_Count {
-  int pipe_count;
-  int space_count;
-  int in_re_count;
-  int out_re_count;
-  int and_count;
-  int total_count;
+	int pipe_count;
+	int space_count;
+	int in_re_count;
+	int out_re_count;
+	int and_count;
+	int total_count;
 } DELIMIT_Count;
 
 
