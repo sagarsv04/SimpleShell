@@ -10,16 +10,14 @@ Sagar Vishwakarma (svishwa2@binghamton.edu)
 State University of New York, Binghamton
 
 
-File-Info
-============
+## File-Info :
 
 1)	Makefile         - Compile the program
 2)	mysh.c           - Contains implementation of a shell
 3)	mysh.h           - Contains function declarations of a shell
 
 
-How to compile and run
-============
+## How to compile and run :
 
 1)	go to terminal, cd into project directory and type 'make' to compile project
 
@@ -30,8 +28,7 @@ How to compile and run
   - Type "help" to more about the commands supported by shell
 
 
-Commands Supported
-============
+## Commands Supported :
 
 - Internal commands						: cd, pwd, echo, exit or Ctrl+C, help etc
 - Clear Screen     						: clear, reset
@@ -44,7 +41,7 @@ Commands Supported
 - Variable Substitution 			: echo $USER (substitution of max CMD_LEN characters)
 
 
-Note
-============
+## Note :
+
 - Regex or * for string matching not supported
 	eg: ls -la | grep *.h
